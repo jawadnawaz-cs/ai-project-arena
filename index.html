@@ -99,15 +99,15 @@ supabase.auth.onAuthStateChange((_event,session)=>{
   setTimeout(async()=>{
    try{
     await checkArenaAdmin();
-    if(isArenaAdmin){document.body.classList.add('authenticated-view');dashboard.classList.remove('visible');voterDashboard.classList.remove('visible');adminDashboard.classList.add('visible');adminDashboard.scrollIntoView({behavior:'instant'});return}
+    if(isArenaAdmin){document.body.classList.add('authenticated-view');dashboard.classList.remove('visible');voterDashboard.classList.remove('visible');adminDashboard.classList.add('visible');adminDashboard.scrollIntoView({behavior:'auto'});return}
     const selectedRole=sessionStorage.getItem('arena_selected_role');
     let {data:role,error}=await supabase.rpc('get_arena_role');if(error)throw error;
     if(!role&&selectedRole){const assigned=await supabase.rpc('set_arena_role',{requested_role:selectedRole});if(assigned.error)throw assigned.error;role=assigned.data}
     if(!role){document.body.classList.remove('authenticated-view');roleChooser.scrollIntoView({behavior:'smooth'});return}
     if(selectedRole&&selectedRole!==role){await supabase.auth.signOut();throw new Error('This account is registered as '+role+'. Please choose the matching role.')}
     sessionStorage.removeItem('arena_selected_role');currentArenaRole=role;document.body.classList.add('authenticated-view');
-    if(role==='team'){voterDashboard.classList.remove('visible');await loadDashboard(session.user);dashboard.scrollIntoView({behavior:'instant'})}
-    else if(role==='voter'){dashboard.classList.remove('visible');await loadVoterDashboard(session.user);voterDashboard.scrollIntoView({behavior:'instant'})}
+    if(role==='team'){voterDashboard.classList.remove('visible');await loadDashboard(session.user);dashboard.scrollIntoView({behavior:'auto'})}
+    else if(role==='voter'){dashboard.classList.remove('visible');await loadVoterDashboard(session.user);voterDashboard.scrollIntoView({behavior:'auto'})}
    }catch(err){console.error('Arena role routing failed',err);const msg=document.getElementById('voterMessage');if(msg)msg.textContent=err.message||'Could not open your account dashboard.';document.body.classList.remove('authenticated-view')}
   },0);
  }else{
@@ -177,7 +177,7 @@ async function loadVoterDashboard(user){
  const displayName=profile.data?.full_name||(user.email||'Student').split('@')[0];document.getElementById('voterWelcome').textContent='Welcome, '+displayName;
  const [settings,projects,votes]=await Promise.all([
   supabase.from('competition_settings').select('voting_open,voting_deadline').eq('id',true).maybeSingle(),
-  supabase.from('project_submissions').select('id,group_id,title,description,video_url').eq('status','approved').order('submitted_at',{ascending:false}),
+  supabase.rpc('get_approved_arena_projects'),
   supabase.from('votes').select('submission_id').eq('voter_id',user.id)
  ]);
  if(settings.error)throw settings.error;if(projects.error)throw projects.error;if(votes.error)throw votes.error;
@@ -185,9 +185,8 @@ async function loadVoterDashboard(user){
  const notice=document.getElementById('votingNotice');notice.textContent=(votingOpen?'Voting is open':'Voting is currently closed')+(settings.data?.voting_deadline?' · Deadline: '+new Date(settings.data.voting_deadline).toLocaleString():'');
  const list=document.getElementById('voterProjectList');const items=projects.data||[];
  if(!items.length){list.innerHTML='<div class="dashboard-empty">No approved projects are available yet.</div>';return}
- const groupIds=[...new Set(items.map(x=>x.group_id))];const groups=await supabase.from('project_groups').select('id,name').in('id',groupIds);if(groups.error)throw groups.error;
- const groupNames=new Map((groups.data||[]).map(x=>[x.id,x.name]));const hasVoted=(votes.data||[]).length>0;
- list.innerHTML=items.map(x=>{const embed=getYoutubeEmbedUrl(x.video_url||'');return '<article class="voter-card" data-vote-submission="'+escapeHtml(x.id)+'"><div class="eyebrow">'+escapeHtml(groupNames.get(x.group_id)||'Student team')+'</div><h3>'+escapeHtml(x.title)+'</h3><p>'+escapeHtml(x.description)+'</p>'+(embed?'<iframe src="'+escapeHtml(embed)+'" title="'+escapeHtml(x.title)+' video" loading="lazy" allowfullscreen></iframe>':'')+'<button class="btn primary" type="button" data-cast-vote '+(hasVoted||!votingOpen?'disabled':'')+'>'+(hasVoted?'Vote already submitted':votingOpen?'Vote for this project':'Voting closed')+'</button></article>'}).join('');
+ const hasVoted=(votes.data||[]).length>0;
+ list.innerHTML=items.map(x=>{const embed=getYoutubeEmbedUrl(x.video_url||'');return '<article class="voter-card" data-vote-submission="'+escapeHtml(x.submission_id)+'"><div class="eyebrow">'+escapeHtml(x.team_name||'Student team')+'</div><h3>'+escapeHtml(x.project_title)+'</h3><p>'+escapeHtml(x.project_description)+'</p>'+(embed?'<iframe src="'+escapeHtml(embed)+'" title="'+escapeHtml(x.project_title)+' video" loading="lazy" allowfullscreen></iframe>':'')+'<button class="btn primary" type="button" data-cast-vote '+(hasVoted||!votingOpen?'disabled':'')+'>'+(hasVoted?'Vote already submitted':votingOpen?'Vote for this project':'Voting closed')+'</button></article>'}).join('');
  document.getElementById('voterMessage').textContent=hasVoted?'Your vote has been recorded. You can only vote once.':'You can cast one vote while voting is open.';
 }
 document.getElementById('refreshVoter').addEventListener('click',async()=>{try{await loadVoterDashboard(activeUser)}catch(e){document.getElementById('voterMessage').textContent=e.message||'Could not refresh projects.'}});
