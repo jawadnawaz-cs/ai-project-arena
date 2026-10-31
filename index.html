@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f7f7f4"><meta name="description" content="AI Project Arena — a university student project showcase.">
+<title>AI Project Arena — Ideas in action</title>
+<style>
+:root{--paper:#f7f7f4;--ink:#252923;--green:#315c48;--sage:#dce5dc;--line:#e2e2da;--muted:#72776f;--white:#fff}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}.wrap{width:min(1120px,calc(100% - 48px));margin:auto}.topbar{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center}.nav{display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:-.04em}.mark{width:34px;height:34px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:white;font-size:18px}.navlinks{display:flex;gap:30px;color:#555b53;font-size:14px}.navactions{display:flex;gap:10px}.btn{border:1px solid var(--line);border-radius:8px;padding:10px 16px;background:transparent;color:var(--ink);font-size:14px;font-weight:650;transition:.18s}.btn:hover{transform:translateY(-1px);border-color:#aab5a9}.btn.primary{background:var(--green);border-color:var(--green);color:white}.hero{padding:86px 0 74px;display:grid;grid-template-columns:1.12fr .88fr;gap:72px;align-items:center}.eyebrow{display:inline-flex;gap:9px;color:var(--green);font-size:12px;font-weight:750;letter-spacing:.12em;text-transform:uppercase}.eyebrow:before{content:"";width:22px;height:1px;background:var(--green);align-self:center}h1{font-size:clamp(44px,6vw,70px);line-height:1.02;letter-spacing:-.065em;margin:20px 0 22px}h1 span{color:var(--green)}.lead{font-size:18px;line-height:1.7;color:#62685f;max-width:540px;margin:0 0 30px}.heroactions{display:flex;gap:12px;flex-wrap:wrap}.meta{display:flex;gap:24px;margin-top:38px;color:var(--muted);font-size:13px}.meta strong{color:var(--ink);font-size:15px;display:block}.showcase{background:var(--sage);border-radius:18px;padding:28px;min-height:390px;position:relative;overflow:hidden}.showcase:before,.showcase:after{content:"";position:absolute;border:1px solid rgba(49,92,72,.15);border-radius:50%;width:310px;height:310px;right:-90px;top:-90px}.showcase:after{width:220px;height:220px;right:-45px;top:-45px}.showcase-label{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--green);font-weight:750;position:relative}.project-card{position:relative;background:white;border:1px solid rgba(37,41,35,.08);border-radius:13px;padding:20px;margin-top:42px;box-shadow:0 12px 35px rgba(37,41,35,.06)}.project-top,.project-foot{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}.status{background:#edf2ed;color:var(--green);padding:5px 9px;border-radius:20px;font-weight:700}.project-card h3{font-size:22px;letter-spacing:-.04em;margin:18px 0 7px}.project-card p{font-size:13px;color:var(--muted);margin:0}.project-foot{border-top:1px solid var(--line);padding-top:15px;margin-top:20px}.bars{display:flex;gap:5px;align-items:end;height:54px;margin-top:25px}.bars i{flex:1;background:#8aa594;border-radius:4px 4px 0 0}.bars i:nth-child(1){height:35%}.bars i:nth-child(2){height:56%}.bars i:nth-child(3){height:43%}.bars i:nth-child(4){height:78%}.bars i:nth-child(5){height:64%}.bars i:nth-child(6){height:100%}.bars i:nth-child(7){height:72%}.section{padding:76px 0;border-top:1px solid var(--line)}.sectionhead{display:flex;justify-content:space-between;gap:30px;align-items:end;margin-bottom:30px}.section h2{font-size:36px;letter-spacing:-.05em;line-height:1.1;margin:12px 0 0}.sectionhead p{max-width:390px;color:var(--muted);font-size:14px;margin:0}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.step{padding:24px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.45)}.stepnum{color:var(--green);font-size:12px;font-weight:750;letter-spacing:.1em}.step h3{font-size:18px;margin:22px 0 8px}.step p{font-size:14px;color:var(--muted);margin:0}.cta{background:var(--green);color:white;border-radius:16px;padding:42px 46px;display:flex;justify-content:space-between;align-items:center;gap:25px}.cta h2{font-size:32px;margin:0 0 8px}.cta p{margin:0;color:#dce5dc;font-size:14px}.cta .btn{background:white;border-color:white;color:var(--green);white-space:nowrap}footer{padding:28px 0 36px;color:var(--muted);font-size:13px}.footerinner{display:flex;justify-content:space-between;gap:20px;align-items:center}.footerlinks{display:flex;gap:22px}
+.auth-modal{position:fixed;inset:0;background:rgba(25,30,26,.48);display:none;place-items:center;padding:18px;z-index:20}.auth-modal.open{display:grid}.auth-panel{width:min(100%,440px);background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.18);position:relative}.auth-panel h2{margin:0 0 7px;font-size:27px;letter-spacing:-.04em}.auth-panel>p{color:var(--muted);font-size:14px;margin:0 0 20px}.auth-close{position:absolute;right:16px;top:13px;border:0;background:transparent;font-size:24px;color:var(--muted)}.auth-tabs{display:flex;gap:8px;margin:0 0 18px}.auth-tabs button{flex:1;border:1px solid var(--line);border-radius:8px;padding:9px;background:white;color:var(--ink);font-weight:650}.auth-tabs button.active{background:var(--sage);border-color:#b9cabb;color:var(--green)}.field{display:block;margin:12px 0;font-size:13px;font-weight:650}.field input,.field select{display:block;width:100%;margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:12px;background:white;color:var(--ink);font:inherit}.auth-submit{width:100%;margin-top:10px}.auth-google{display:block;width:100%;margin-top:10px;background:white;min-height:44px}.auth-divider{text-align:center;color:var(--muted);font-size:12px;margin:14px 0}.auth-note{font-size:12px;color:var(--muted);margin-top:14px}.auth-message{font-size:13px;margin-top:12px;color:var(--green);min-height:20px}.user-chip{font-size:13px;color:var(--green);align-self:center;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);background:var(--ink);color:white;padding:12px 18px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}@media(max-width:760px){.wrap{width:min(100% - 32px,560px)}.navlinks{display:none}.hero{grid-template-columns:1fr;gap:38px;padding:62px 0 54px}.showcase{min-height:340px}.section{padding:56px 0}.sectionhead{display:block}.sectionhead p{margin-top:14px}.steps{grid-template-columns:1fr}.cta{padding:30px;display:block}.cta .btn{margin-top:22px}.footerinner{align-items:flex-start;flex-direction:column}.meta{gap:18px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+
+/* Student workspace */
+.dashboard{display:none;padding:54px 0 70px;border-top:1px solid var(--line)}
+.dashboard.visible{display:block}
+.dash-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:26px}
+.dash-head h2{font-size:34px;letter-spacing:-.05em;margin:8px 0}
+.dash-head p{color:var(--muted);margin:0;font-size:14px}
+.dash-grid{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr);gap:18px;align-items:start}
+.dash-panel,.group-panel{background:white;border:1px solid var(--line);border-radius:13px;padding:22px}
+.dash-panel h3,.group-panel h3{margin:0 0 7px;font-size:19px;letter-spacing:-.03em}
+.dash-help{color:var(--muted);font-size:13px;margin:0 0 17px}
+.dash-field{display:block;margin:12px 0;font-size:13px;font-weight:650}
+.dash-field input,.dash-field textarea{display:block;width:100%;margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:11px;background:white;color:var(--ink);font:inherit}
+.dash-field textarea{min-height:100px;resize:vertical}
+.member-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:9px 0}
+.member-row input{min-width:0;width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:13px}
+.member-remove,.text-button{border:0;background:transparent;color:var(--green);font-size:13px;font-weight:700;padding:6px}
+.member-remove{color:#9a5147}
+.dash-message{font-size:13px;min-height:19px;margin-top:10px;color:var(--green)}
+.dash-status{display:inline-block;background:#edf2ed;color:var(--green);border-radius:20px;padding:4px 9px;font-size:11px;font-weight:750;text-transform:capitalize}
+.dash-status.rejected{background:#f7e9e6;color:#984c42}
+.dash-status.pending{background:#f3f0e5;color:#78652d}
+.group-list{display:grid;gap:15px}
+.group-title{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.group-title h3{margin:0}
+.roster{margin:13px 0 17px;padding:0;list-style:none;display:grid;gap:6px;color:#5e655c;font-size:13px}
+.roster li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #efefe9;padding:5px 0}
+.submission-form{border-top:1px solid var(--line);padding-top:16px;margin-top:13px}
+.submission-form .btn{margin-top:4px}
+.deadline-note{background:#f2f4ef;padding:11px 13px;border-radius:8px;font-size:12px;color:#5f685e;margin:14px 0}
+.dashboard-empty{border:1px dashed #c9cec5;border-radius:12px;padding:24px;text-align:center;color:var(--muted);font-size:14px}
+@media(max-width:760px){.dash-grid{grid-template-columns:1fr}.dash-head{display:block}.member-row{grid-template-columns:1fr 1fr}.member-remove{grid-column:1/-1;text-align:right}}
+
+
+.youtube-player{position:relative;width:100%;aspect-ratio:16/9;background:#171a17;border-radius:10px;overflow:hidden;margin:14px 0 16px}
+.youtube-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.youtube-link-note{font-size:12px;color:var(--muted);margin:-8px 0 14px}
+.admin-dashboard{display:none;padding:46px 0 72px;border-top:1px solid var(--line)}.admin-dashboard.visible{display:block}.admin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0}.admin-stat,.admin-panel,.admin-submission{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px}.admin-stat span{display:block;color:var(--muted);font-size:12px}.admin-stat strong{font-size:28px}.admin-panel{margin:16px 0}.admin-panel h3{margin:0 0 12px}.admin-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.admin-settings label{font-size:13px;font-weight:650}.admin-settings input{display:block;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:5px;font:inherit}.admin-toggle{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0}.admin-list{display:grid;gap:12px}.admin-submission h4{margin:0 0 5px;font-size:18px}.admin-submission p{margin:6px 0;color:var(--muted);font-size:13px;white-space:pre-wrap}.admin-submission textarea{width:100%;min-height:65px;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;margin:8px 0}.admin-actions{display:flex;gap:8px;flex-wrap:wrap}.btn.danger{border-color:#ead1cc;color:#984c42}.admin-message{font-size:13px;color:var(--green);min-height:20px;margin-top:8px}.admin-video{width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin:8px 0}.admin-results{display:grid;gap:8px}.admin-result{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:8px 0;font-size:13px}@media(max-width:760px){.admin-grid,.admin-settings{grid-template-columns:1fr}}</style>  <link rel="stylesheet" href="login.css" />
+</head><body>
+<header class="topbar"><div class="wrap nav"><a class="brand" href="#"><span class="mark">A</span><span>AI Project Arena</span></a><nav class="navlinks"><a href="#about">About</a><a href="#process">How it works</a><a href="#projects">Projects</a></nav><div class="navactions"><button class="btn" data-auth="signin">Sign in</button><button class="btn primary" data-auth="signup">Get started</button></div></div></header>
+<main><section class="wrap hero" id="about"><div><div class="eyebrow">University innovation showcase</div><h1>Big ideas.<br><span>Built by students.</span></h1><p class="lead">A place to present your team’s work, explore what other students are building, and help outstanding projects get the recognition they deserve.</p><div class="heroactions"><button class="btn primary" data-auth="signin">Explore the arena ↗</button><button class="btn" data-toast="The submission guide will be available soon.">How it works</button></div><div class="meta"><div><strong>One community</strong>Students & mentors</div><div><strong>Real projects</strong>Ideas made tangible</div><div><strong>Fair voting</strong>One vote per student</div></div></div><div class="showcase" id="projects"><div class="showcase-label">Featured project · Preview</div><article class="project-card"><div class="project-top"><span>COMPUTER SCIENCE · TEAM 04</span><span class="status">Approved</span></div><h3>Smart Campus Assistant</h3><p>A student-built concept for making campus information easier to access.</p><div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="project-foot"><span>Project showcase</span><span>Video · Team details</span></div></article></div></section>
+
+<section class="dashboard" id="studentDashboard">
+ <div class="wrap">
+  <div class="dash-head"><div><div class="eyebrow">Student workspace</div><h2 id="dashWelcome">Your project dashboard</h2><p>Register your team, manage its roster and submit your project.</p></div><button class="btn" id="refreshDashboard" type="button">Refresh</button></div>
+  <div class="deadline-note" id="competitionNotice">Loading competition settings…</div>
+  <div class="dash-grid">
+   <section class="dash-panel">
+    <h3>Register a team</h3><p class="dash-help">Add yourself as the team lead, then list your teammates and their roll numbers.</p>
+    <form id="createGroupForm">
+     <label class="dash-field">Team name<input name="groupName" maxlength="80" required placeholder="e.g. Team Innovators"></label>
+     <div style="font-size:13px;font-weight:700;margin:16px 0 6px">Team members</div>
+     <div id="memberRows">
+      <div class="member-row"><input name="memberName" required maxlength="100" placeholder="Your full name"><input name="rollNumber" required maxlength="40" placeholder="Your roll number"><button class="member-remove" type="button" aria-label="Remove member" hidden>Remove</button></div>
+     </div>
+     <button class="text-button" id="addMember" type="button">+ Add another member</button>
+     <button class="btn primary" type="submit" style="width:100%;margin-top:12px">Create team</button>
+     <div class="dash-message" id="groupMessage" role="status"></div>
+    </form>
+   </section>
+   <section><div class="group-list" id="groupList"><div class="dashboard-empty">Sign in to load your teams.</div></div></section>
+  </div>
+ </div>
+</section>
+
+<section class="admin-dashboard" id="adminDashboard"><div class="wrap"><div class="dash-head"><div><div class="eyebrow">Administration</div><h2>Competition control room</h2><p>Review submissions, manage competition windows and publish official results.</p></div><button class="btn" id="refreshAdmin" type="button">Refresh data</button></div><div class="admin-grid"><div class="admin-stat"><span>Total submissions</span><strong id="adminTotal">—</strong></div><div class="admin-stat"><span>Awaiting review</span><strong id="adminPending">—</strong></div><div class="admin-stat"><span>Approved projects</span><strong id="adminApproved">—</strong></div></div><section class="admin-panel"><h3>Competition settings</h3><div class="admin-settings"><label>Competition title<input id="adminTitle" maxlength="160"></label><label>Submission deadline<input id="adminSubmissionDeadline" type="datetime-local"></label><label>Voting deadline<input id="adminVotingDeadline" type="datetime-local"></label></div><label class="admin-toggle"><input id="adminSubmissionsOpen" type="checkbox"> Submissions are open</label><label class="admin-toggle"><input id="adminVotingOpen" type="checkbox"> Voting is open</label><label class="admin-toggle"><input id="adminResultsPublished" type="checkbox"> Publish results to students</label><button class="btn primary" id="saveAdminSettings" type="button">Save competition settings</button><div class="admin-message" id="adminSettingsMessage" role="status"></div></section><section class="admin-panel"><h3>Project submissions</h3><p class="dash-help">Approve projects for the public gallery, or reject them with feedback for the team.</p><div class="admin-list" id="adminSubmissionList"><div class="dashboard-empty">Loading submissions…</div></div></section><section class="admin-panel"><h3>Results</h3><p class="dash-help">Vote totals remain hidden from students until results are published.</p><div id="adminResults" class="admin-results">Results are available to administrators.</div></section></div></section><section class="section" id="process"><div class="wrap"><div class="sectionhead"><div><div class="eyebrow">Simple by design</div><h2>From first idea<br>to final showcase.</h2></div><p>Everything your university project competition needs, organised in one clear and easy-to-use space.</p></div><div class="steps"><article class="step"><div class="stepnum">01 / SUBMIT</div><h3>Build your team’s page</h3><p>Register your group, add your project details and members, then share a demo video.</p></article><article class="step"><div class="stepnum">02 / DISCOVER</div><h3>Explore student projects</h3><p>Browse approved entries, learn what other teams created and watch their demonstrations.</p></article><article class="step"><div class="stepnum">03 / VOTE</div><h3>Recognise great work</h3><p>Cast your vote during the official voting period. Results stay private until they are announced.</p></article></div></div></section>
+<section class="wrap" style="padding-bottom:70px"><div class="cta"><div><h2>Your idea belongs here.</h2><p>Bring your team, share what you’ve made, and take part in the arena.</p></div><button class="btn" data-auth="signup">Join the arena ↗</button></div></section></main>
+<footer><div class="wrap footerinner"><span>© 2026 AI Project Arena · University project showcase</span><div class="footerlinks"><a href="#about">About</a><a href="#process">Guidelines</a><a href="#" id="adminEntry">Admin</a></div></div></footer><section class="auth-modal" id="authModal" aria-hidden="true"><div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" id="authClose" type="button" aria-label="Close">×</button><h2 id="authTitle">Welcome to the arena</h2><p id="authSubtitle">Sign in to explore student projects and take part.</p><div class="auth-tabs" role="tablist"><button type="button" class="active" data-mode="signin">Sign in</button><button type="button" data-mode="signup">Create account</button></div><button id="googleSignIn" type="button">Continue with university Google</button><form id="authForm"><label id="nameField" style="display:none">Full name<input id="fullName" type="text" autocomplete="name"></label><label id="typeField" style="display:none">Account type<select id="accountType"><option value="general">General account</option><option value="university">University student</option></select></label><label>Email address<input id="email" type="email" autocomplete="email" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required minlength="8"></label><button id="authSubmit" type="submit">Sign in</button></form><p id="authMessage" role="status" aria-live="polite"></p></div></section><div class="toast" role="status" aria-live="polite"></div><script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
+const SUPABASE_URL='https://bhwqbigitupdtarohzys.supabase.co';
+const SUPABASE_KEY='sb_publishable_KEXRUrOhjCb49chl-dCCRw_1m0xkxw2';
+const AUTH_REDIRECT_URL=window.location.origin+'/';
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+
+
+
+supabase.auth.onAuthStateChange((_event,session)=>{const nav=document.querySelector('.navactions');nav.querySelectorAll('.user-chip').forEach(n=>n.remove());nav.querySelectorAll('[data-auth]').forEach(b=>b.hidden=!!session);nav.querySelectorAll('[data-signout]').forEach(n=>n.remove());if(session){const chip=document.createElement('span');chip.className='user-chip';chip.textContent=session.user.email;nav.prepend(chip);const signout=document.createElement('button');signout.className='btn';signout.dataset.signout='true';signout.textContent='Sign out';signout.addEventListener('click',async()=>{await supabase.auth.signOut();dashboard.classList.remove('visible');document.getElementById('groupList').innerHTML='<div class="dashboard-empty">Sign in to load your teams.</div>'});nav.append(signout);setTimeout(()=>{loadDashboard(session.user).catch(err=>{dashboard.classList.add('visible');document.getElementById('groupList').innerHTML='<div class="dashboard-empty">'+escapeHtml(err.message||'Could not load dashboard.')+'</div>'});checkArenaAdmin().catch(err=>{adminDashboard.classList.remove('visible');console.warn('Admin check failed',err)})},0)}else{dashboard.classList.remove('visible');adminDashboard.classList.remove('visible');isArenaAdmin=false}});
+
+const dashboard=document.getElementById('studentDashboard');
+let activeUser=null, competitionSettings=null;
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+function dashMessage(id,text,isError){const el=document.getElementById(id);if(el){el.textContent=text||'';el.style.color=isError?'#a33':'var(--green)'}}
+function submissionWindowOpen(){if(!competitionSettings||!competitionSettings.submissions_open)return false;return !competitionSettings.submission_deadline||new Date(competitionSettings.submission_deadline).getTime()>=Date.now()}
+function formatDeadline(value){if(!value)return 'No deadline set';return new Date(value).toLocaleString()}
+function getYoutubeEmbedUrl(raw){try{const u=new URL(raw);const host=u.hostname.toLowerCase().replace(/^www\./,'');if(!['youtube.com','m.youtube.com','youtu.be'].includes(host))return null;let id='';if(host==='youtu.be')id=u.pathname.split('/').filter(Boolean)[0]||'';else if(u.pathname==='/watch')id=u.searchParams.get('v')||'';else{const parts=u.pathname.split('/').filter(Boolean);if(['embed','shorts','live','v'].includes(parts[0]))id=parts[1]||''}return /^[A-Za-z0-9_-]{11}$/.test(id)?'https://www.youtube-nocookie.com/embed/'+id:null}catch{return null}}
+function addMemberRow(name,roll){const row=document.createElement('div');row.className='member-row';row.innerHTML='<input name="memberName" required maxlength="100" placeholder="Member full name"><input name="rollNumber" required maxlength="40" placeholder="Roll number"><button class="member-remove" type="button">Remove</button>';row.querySelectorAll('input')[0].value=name||'';row.querySelectorAll('input')[1].value=roll||'';row.querySelector('button').addEventListener('click',()=>row.remove());document.getElementById('memberRows').append(row)}
+document.getElementById('addMember').addEventListener('click',()=>addMemberRow());
+async function renderGroupCard(group){
+ const [memberResult,submissionResult]=await Promise.all([
+  supabase.from('group_members').select('member_name,roll_number').eq('group_id',group.id).order('created_at'),
+  supabase.from('project_submissions').select('id,title,description,video_url,video_path,status,admin_feedback,updated_at').eq('group_id',group.id).maybeSingle()
+ ]);
+ if(memberResult.error)throw memberResult.error;
+ if(submissionResult.error)throw submissionResult.error;
+ const members=memberResult.data||[], sub=submissionResult.data;
+ const editable=!!(sub&&sub.status==='pending'&&submissionWindowOpen());
+ const canSubmit=submissionWindowOpen()&&(!sub||editable);
+ const status=sub?'<span class="dash-status '+escapeHtml(sub.status)+'">'+escapeHtml(sub.status)+'</span>':'<span class="dash-status">Not submitted</span>';
+ let roster=members.map(m=>'<li><span>'+escapeHtml(m.member_name)+'</span><span>'+escapeHtml(m.roll_number)+'</span></li>').join('');
+ let feedback=sub&&sub.admin_feedback?'<div class="deadline-note"><strong>Teacher feedback:</strong> '+escapeHtml(sub.admin_feedback)+'</div>':'';
+ let formHtml='';
+ if(canSubmit){
+  formHtml='<form class="submission-form" data-group="'+escapeHtml(group.id)+'" data-submission="'+escapeHtml(sub?sub.id:'')+'" data-old-video="'+escapeHtml(sub&&sub.video_path?sub.video_path:'')+'"><h3>'+(sub?'Edit pending submission':'Submit your project')+'</h3><label class="dash-field">Project title<input name="title" maxlength="140" required value="'+escapeHtml(sub?sub.title:'')+'" placeholder="Give your project a clear title"></label><label class="dash-field">Project description<textarea name="description" maxlength="5000" required placeholder="Explain the problem, your solution and how it works">'+escapeHtml(sub?sub.description:'')+'</textarea></label><label class="dash-field">YouTube video link<input name="videoUrl" type="url" required value="'+escapeHtml(sub&&sub.video_url?sub.video_url:'')+'" placeholder="https://www.youtube.com/watch?v=…"></label><p class="youtube-link-note">Paste a YouTube watch, youtu.be or Shorts link. Your video will appear as an embedded player on the project page.</p><button class="btn primary" type="submit">'+(sub?'Save changes':'Submit project')+'</button><div class="dash-message" role="status"></div></form>';
+ }else if(!sub){
+  formHtml='<div class="deadline-note">Project submissions are currently closed. You can still register your team.</div>';
+ }else{
+  formHtml='<div class="deadline-note">This submission is '+escapeHtml(sub.status)+'. Only pending submissions can be edited while submissions are open.</div>';
+ }
+ const embedUrl=sub&&sub.video_url?getYoutubeEmbedUrl(sub.video_url):null;
+ const video=embedUrl?'<div class="youtube-player"><iframe src="'+escapeHtml(embedUrl)+'" title="'+escapeHtml(sub.title)+' video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>':(sub&&sub.video_url?'<p class="dash-help"><a href="'+escapeHtml(sub.video_url)+'" target="_blank" rel="noopener">Open submitted video</a></p>':'');
+ return '<article class="group-panel"><div class="group-title"><h3>'+escapeHtml(group.name)+'</h3>'+status+'</div><ul class="roster">'+roster+'</ul>'+(sub?'<div style="font-size:13px"><strong>'+escapeHtml(sub.title)+'</strong><p class="dash-help">'+escapeHtml(sub.description)+'</p></div>'+video+feedback:'')+formHtml+'</article>';
+}
+async function loadDashboard(user){
+ if(!user)return;
+ activeUser=user;dashboard.classList.add('visible');
+ const profile=await supabase.from('profiles').select('full_name').eq('id',user.id).maybeSingle();
+ const displayName=profile.data&&profile.data.full_name?profile.data.full_name:(user.email||'Student').split('@')[0];
+ document.getElementById('dashWelcome').textContent='Welcome, '+displayName;
+ const settings=await supabase.from('competition_settings').select('title,submissions_open,submission_deadline').eq('id',true).maybeSingle();
+ if(settings.error)throw settings.error;
+ competitionSettings=settings.data;
+ const notice=document.getElementById('competitionNotice');
+ if(competitionSettings){notice.textContent=(competitionSettings.submissions_open?'Submissions are open':'Submissions are currently closed')+' · Deadline: '+formatDeadline(competitionSettings.submission_deadline)+(submissionWindowOpen()?'':' · You can still register a team.')}
+ const list=document.getElementById('groupList');list.innerHTML='<div class="dashboard-empty">Loading your teams…</div>';
+ const groups=await supabase.from('project_groups').select('id,name,created_at').eq('created_by',user.id).order('created_at',{ascending:false});
+ if(groups.error)throw groups.error;
+ if(!groups.data||!groups.data.length){list.innerHTML='<div class="dashboard-empty">No team registered yet. Use the form to create your first team.</div>';return}
+ const cards=await Promise.all(groups.data.map(renderGroupCard));list.innerHTML=cards.join('');
+}
+document.getElementById('refreshDashboard').addEventListener('click',async()=>{try{await loadDashboard(activeUser)}catch(e){dashMessage('groupMessage',e.message,true)}});
+document.getElementById('createGroupForm').addEventListener('submit',async e=>{
+ e.preventDefault();if(!activeUser){dashMessage('groupMessage','Please sign in first.',true);return}
+ const form=e.currentTarget,button=form.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Creating team…';
+ let createdGroup=null;
+ try{
+  const fd=new FormData(form),groupName=String(fd.get('groupName')||'').trim();
+  const names=[...form.querySelectorAll('input[name="memberName"]')].map(x=>x.value.trim());
+  const rolls=[...form.querySelectorAll('input[name="rollNumber"]')].map(x=>x.value.trim());
+  if(!groupName||names.some(x=>!x)||rolls.some(x=>!x))throw new Error('Complete the team name and every member name and roll number.');
+  if(new Set(rolls.map(x=>x.toLowerCase())).size!==rolls.length)throw new Error('Each member must have a different roll number.');
+  const inserted=await supabase.from('project_groups').insert({name:groupName,created_by:activeUser.id}).select('id').single();
+  if(inserted.error)throw inserted.error;createdGroup=inserted.data;
+  const memberRows=names.map((name,i)=>({group_id:createdGroup.id,member_name:name,roll_number:rolls[i],user_id:i===0?activeUser.id:null}));
+  const added=await supabase.from('group_members').insert(memberRows);
+  if(added.error){await supabase.from('project_groups').delete().eq('id',createdGroup.id);createdGroup=null;throw added.error}
+  form.reset();document.getElementById('memberRows').innerHTML='<div class="member-row"><input name="memberName" required maxlength="100" placeholder="Your full name"><input name="rollNumber" required maxlength="40" placeholder="Your roll number"><button class="member-remove" type="button" hidden>Remove</button></div>';
+  dashMessage('groupMessage','Team registered successfully.');await loadDashboard(activeUser);
+ }catch(err){dashMessage('groupMessage',err.message||'Could not create team.',true)}
+ finally{button.disabled=false;button.textContent='Create team'}
+});
+document.getElementById('groupList').addEventListener('submit',async e=>{
+ const form=e.target.closest('.submission-form');if(!form)return;e.preventDefault();
+ const button=form.querySelector('button[type="submit"]'),messageEl=form.querySelector('.dash-message');button.disabled=true;button.textContent='Saving…';messageEl.textContent='';
+ let uploadedPath=null;
+ try{
+  if(!submissionWindowOpen())throw new Error('Submissions are closed or the deadline has passed.');
+  const fd=new FormData(form),groupId=form.dataset.group,submissionId=form.dataset.submission;
+  const title=String(fd.get('title')||'').trim(),description=String(fd.get('description')||'').trim(),videoUrl=String(fd.get('videoUrl')||'').trim();
+  if(!title||!description)throw new Error('Enter a project title and description.');
+  if(!videoUrl)throw new Error('Paste your YouTube video link.');
+  if(!getYoutubeEmbedUrl(videoUrl))throw new Error('Enter a valid YouTube link (watch, youtu.be or Shorts).');
+  const payload={title,description,video_url:videoUrl,video_path:null,status:'pending',updated_at:new Date().toISOString()};
+  let saved;
+  if(submissionId)saved=await supabase.from('project_submissions').update(payload).eq('id',submissionId);
+  else saved=await supabase.from('project_submissions').insert({...payload,group_id:groupId});
+  if(saved.error)throw saved.error;
+  messageEl.textContent='Submission saved.';await loadDashboard(activeUser);
+ }catch(err){messageEl.textContent=err.message||'Could not save submission.';messageEl.style.color='#a33'}
+ finally{button.disabled=false;button.textContent=form.dataset.submission?'Save changes':'Submit project'}
+});
+
+
+const adminDashboard=document.getElementById('adminDashboard');let isArenaAdmin=false;
+function adminMsg(id,t,bad=false){const el=document.getElementById(id);if(el){el.textContent=t||'';el.style.color=bad?'#a33':'var(--green)'}}
+function localDate(v){if(!v)return '';const d=new Date(v);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+function isoDate(v){return v?new Date(v).toISOString():null}
+async function checkArenaAdmin(){const {data,error}=await supabase.rpc('is_arena_admin');if(error)throw error;isArenaAdmin=Boolean(data);adminDashboard.classList.toggle('visible',isArenaAdmin);if(isArenaAdmin)await loadAdminDashboard()}
+async function loadAdminDashboard(){if(!isArenaAdmin)return;const [a,b,g]=await Promise.all([supabase.from('competition_settings').select('*').eq('id',true).single(),supabase.from('project_submissions').select('id,group_id,title,description,video_url,status,admin_feedback,submitted_at').order('submitted_at',{ascending:false}),supabase.from('project_groups').select('id,name')]);if(a.error)throw a.error;if(b.error)throw b.error;if(g.error)throw g.error;const s=a.data,subs=b.data||[],groups=g.data||[],gm=new Map(groups.map(x=>[x.id,x.name]));document.getElementById('adminTitle').value=s.title||'';document.getElementById('adminSubmissionDeadline').value=localDate(s.submission_deadline);document.getElementById('adminVotingDeadline').value=localDate(s.voting_deadline);document.getElementById('adminSubmissionsOpen').checked=!!s.submissions_open;document.getElementById('adminVotingOpen').checked=!!s.voting_open;document.getElementById('adminResultsPublished').checked=!!s.results_published;document.getElementById('adminTotal').textContent=subs.length;document.getElementById('adminPending').textContent=subs.filter(x=>x.status==='pending').length;document.getElementById('adminApproved').textContent=subs.filter(x=>x.status==='approved').length;const list=document.getElementById('adminSubmissionList');list.innerHTML=subs.length?subs.map(x=>{const embed=getYoutubeEmbedUrl(x.video_url||'');return '<article class="admin-submission" data-submission-id="'+escapeHtml(x.id)+'"><div class="group-title"><div><h4>'+escapeHtml(x.title)+'</h4><span class="dash-help">'+escapeHtml(gm.get(x.group_id)||'Team')+' · '+escapeHtml(new Date(x.submitted_at).toLocaleString())+'</span></div><span class="dash-status '+escapeHtml(x.status)+'">'+escapeHtml(x.status)+'</span></div><p>'+escapeHtml(x.description)+'</p>'+(embed?'<iframe class="admin-video" src="'+escapeHtml(embed)+'" title="Project demo" loading="lazy" allowfullscreen></iframe>':'')+'<label class="dash-field">Admin feedback<textarea class="admin-feedback" maxlength="2000" placeholder="Optional feedback">'+escapeHtml(x.admin_feedback||'')+'</textarea></label><div class="admin-actions"><button class="btn primary" data-review="approved" type="button">Approve</button><button class="btn danger" data-review="rejected" type="button">Reject</button><button class="btn" data-review="pending" type="button">Set pending</button></div><div class="admin-message" role="status"></div></article>'}).join(''):'<div class="dashboard-empty">No project submissions yet.</div>';try{const {data,error}=await supabase.rpc('get_arena_results');if(error)throw error;document.getElementById('adminResults').innerHTML=(data||[]).length?data.map((x,i)=>'<div class="admin-result"><span>'+(i+1)+'. '+escapeHtml(x.project_title)+' · '+escapeHtml(x.group_name)+'</span><strong>'+Number(x.vote_count||0)+' votes</strong></div>').join(''):'No approved projects or votes yet.'}catch(e){document.getElementById('adminResults').textContent='Could not load results: '+(e.message||'Access denied')}}
+document.getElementById('adminEntry').addEventListener('click',e=>{e.preventDefault();if(isArenaAdmin){adminDashboard.scrollIntoView({behavior:'smooth'});return}openAuth('signin');showMessage('Sign in with an account that has administrator access.')});
+document.getElementById('refreshAdmin').addEventListener('click',async()=>{try{await loadAdminDashboard();adminMsg('adminSettingsMessage','Dashboard refreshed.')}catch(e){adminMsg('adminSettingsMessage',e.message,true)}});
+document.getElementById('saveAdminSettings').addEventListener('click',async()=>{const btn=document.getElementById('saveAdminSettings');btn.disabled=true;try{const p={title:document.getElementById('adminTitle').value.trim(),submission_deadline:isoDate(document.getElementById('adminSubmissionDeadline').value),voting_deadline:isoDate(document.getElementById('adminVotingDeadline').value),submissions_open:document.getElementById('adminSubmissionsOpen').checked,voting_open:document.getElementById('adminVotingOpen').checked,results_published:document.getElementById('adminResultsPublished').checked,updated_at:new Date().toISOString()};if(!p.title)throw new Error('Enter a competition title.');const {error}=await supabase.from('competition_settings').update(p).eq('id',true);if(error)throw error;adminMsg('adminSettingsMessage','Competition settings saved.');await loadAdminDashboard()}catch(e){adminMsg('adminSettingsMessage',e.message||'Could not save settings.',true)}finally{btn.disabled=false}});
+document.getElementById('adminSubmissionList').addEventListener('click',async e=>{const btn=e.target.closest('[data-review]');if(!btn)return;const card=btn.closest('[data-submission-id]');btn.disabled=true;const msg=card.querySelector('.admin-message');try{const {error}=await supabase.from('project_submissions').update({status:btn.dataset.review,admin_feedback:card.querySelector('.admin-feedback').value.trim(),updated_at:new Date().toISOString()}).eq('id',card.dataset.submissionId);if(error)throw error;msg.textContent='Submission updated.';await loadAdminDashboard()}catch(err){msg.textContent=err.message||'Could not update submission.';msg.style.color='#a33'}finally{btn.disabled=false}});
+
+const toast=document.querySelector('.toast');let timer;document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',()=>{toast.textContent=b.dataset.toast;toast.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove('show'),2800)}));
+</script>  <script type="module" src="auth.js"></script>
+</body></html>
