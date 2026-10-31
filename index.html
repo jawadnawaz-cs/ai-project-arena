@@ -39,6 +39,10 @@
 .dashboard-empty{border:1px dashed #c9cec5;border-radius:12px;padding:24px;text-align:center;color:var(--muted);font-size:14px}
 @media(max-width:760px){.dash-grid{grid-template-columns:1fr}.dash-head{display:block}.member-row{grid-template-columns:1fr 1fr}.member-remove{grid-column:1/-1;text-align:right}}
 
+
+.youtube-player{position:relative;width:100%;aspect-ratio:16/9;background:#171a17;border-radius:10px;overflow:hidden;margin:14px 0 16px}
+.youtube-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.youtube-link-note{font-size:12px;color:var(--muted);margin:-8px 0 14px}
 </style></head><body>
 <header class="topbar"><div class="wrap nav"><a class="brand" href="#"><span class="mark">A</span><span>AI Project Arena</span></a><nav class="navlinks"><a href="#about">About</a><a href="#process">How it works</a><a href="#projects">Projects</a></nav><div class="navactions"><button class="btn" data-auth="signin">Sign in</button><button class="btn primary" data-auth="signup">Get started</button></div></div></header>
 <main><section class="wrap hero" id="about"><div><div class="eyebrow">University innovation showcase</div><h1>Big ideas.<br><span>Built by students.</span></h1><p class="lead">A place to present your team’s work, explore what other students are building, and help outstanding projects get the recognition they deserve.</p><div class="heroactions"><button class="btn primary" data-auth="signin">Explore the arena ↗</button><button class="btn" data-toast="The submission guide will be available soon.">How it works</button></div><div class="meta"><div><strong>One community</strong>Students & mentors</div><div><strong>Real projects</strong>Ideas made tangible</div><div><strong>Fair voting</strong>One vote per student</div></div></div><div class="showcase" id="projects"><div class="showcase-label">Featured project · Preview</div><article class="project-card"><div class="project-top"><span>COMPUTER SCIENCE · TEAM 04</span><span class="status">Approved</span></div><h3>Smart Campus Assistant</h3><p>A student-built concept for making campus information easier to access.</p><div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="project-foot"><span>Project showcase</span><span>Video · Team details</span></div></article></div></section>
@@ -94,6 +98,7 @@ function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(
 function dashMessage(id,text,isError){const el=document.getElementById(id);if(el){el.textContent=text||'';el.style.color=isError?'#a33':'var(--green)'}}
 function submissionWindowOpen(){if(!competitionSettings||!competitionSettings.submissions_open)return false;return !competitionSettings.submission_deadline||new Date(competitionSettings.submission_deadline).getTime()>=Date.now()}
 function formatDeadline(value){if(!value)return 'No deadline set';return new Date(value).toLocaleString()}
+function getYoutubeEmbedUrl(raw){try{const u=new URL(raw);const host=u.hostname.toLowerCase().replace(/^www\./,'');if(!['youtube.com','m.youtube.com','youtu.be'].includes(host))return null;let id='';if(host==='youtu.be')id=u.pathname.split('/').filter(Boolean)[0]||'';else if(u.pathname==='/watch')id=u.searchParams.get('v')||'';else{const parts=u.pathname.split('/').filter(Boolean);if(['embed','shorts','live','v'].includes(parts[0]))id=parts[1]||''}return /^[A-Za-z0-9_-]{11}$/.test(id)?'https://www.youtube-nocookie.com/embed/'+id:null}catch{return null}}
 function addMemberRow(name,roll){const row=document.createElement('div');row.className='member-row';row.innerHTML='<input name="memberName" required maxlength="100" placeholder="Member full name"><input name="rollNumber" required maxlength="40" placeholder="Roll number"><button class="member-remove" type="button">Remove</button>';row.querySelectorAll('input')[0].value=name||'';row.querySelectorAll('input')[1].value=roll||'';row.querySelector('button').addEventListener('click',()=>row.remove());document.getElementById('memberRows').append(row)}
 document.getElementById('addMember').addEventListener('click',()=>addMemberRow());
 async function renderGroupCard(group){
@@ -104,8 +109,6 @@ async function renderGroupCard(group){
  if(memberResult.error)throw memberResult.error;
  if(submissionResult.error)throw submissionResult.error;
  const members=memberResult.data||[], sub=submissionResult.data;
- let videoHref='';
- if(sub&&sub.video_path){const signed=await supabase.storage.from('arena-project-videos').createSignedUrl(sub.video_path,3600);if(!signed.error)videoHref=signed.data.signedUrl}
  const editable=!!(sub&&sub.status==='pending'&&submissionWindowOpen());
  const canSubmit=submissionWindowOpen()&&(!sub||editable);
  const status=sub?'<span class="dash-status '+escapeHtml(sub.status)+'">'+escapeHtml(sub.status)+'</span>':'<span class="dash-status">Not submitted</span>';
@@ -113,13 +116,14 @@ async function renderGroupCard(group){
  let feedback=sub&&sub.admin_feedback?'<div class="deadline-note"><strong>Teacher feedback:</strong> '+escapeHtml(sub.admin_feedback)+'</div>':'';
  let formHtml='';
  if(canSubmit){
-  formHtml='<form class="submission-form" data-group="'+escapeHtml(group.id)+'" data-submission="'+escapeHtml(sub?sub.id:'')+'" data-old-video="'+escapeHtml(sub&&sub.video_path?sub.video_path:'')+'"><h3>'+(sub?'Edit pending submission':'Submit your project')+'</h3><label class="dash-field">Project title<input name="title" maxlength="140" required value="'+escapeHtml(sub?sub.title:'')+'" placeholder="Give your project a clear title"></label><label class="dash-field">Project description<textarea name="description" maxlength="5000" required placeholder="Explain the problem, your solution and how it works">'+escapeHtml(sub?sub.description:'')+'</textarea></label><label class="dash-field">Video link (optional if uploading a file)<input name="videoUrl" type="url" value="'+escapeHtml(sub&&sub.video_url?sub.video_url:'')+'" placeholder="https://…"></label><label class="dash-field">Or upload a demo video<input name="videoFile" type="file" accept="video/mp4,video/webm,video/quicktime"></label><p class="dash-help">MP4, WebM or MOV · maximum 100 MB. Choose either a video link or an uploaded file.</p><button class="btn primary" type="submit">'+(sub?'Save changes':'Submit project')+'</button><div class="dash-message" role="status"></div></form>';
+  formHtml='<form class="submission-form" data-group="'+escapeHtml(group.id)+'" data-submission="'+escapeHtml(sub?sub.id:'')+'" data-old-video="'+escapeHtml(sub&&sub.video_path?sub.video_path:'')+'"><h3>'+(sub?'Edit pending submission':'Submit your project')+'</h3><label class="dash-field">Project title<input name="title" maxlength="140" required value="'+escapeHtml(sub?sub.title:'')+'" placeholder="Give your project a clear title"></label><label class="dash-field">Project description<textarea name="description" maxlength="5000" required placeholder="Explain the problem, your solution and how it works">'+escapeHtml(sub?sub.description:'')+'</textarea></label><label class="dash-field">YouTube video link<input name="videoUrl" type="url" required value="'+escapeHtml(sub&&sub.video_url?sub.video_url:'')+'" placeholder="https://www.youtube.com/watch?v=…"></label><p class="youtube-link-note">Paste a YouTube watch, youtu.be or Shorts link. Your video will appear as an embedded player on the project page.</p><button class="btn primary" type="submit">'+(sub?'Save changes':'Submit project')+'</button><div class="dash-message" role="status"></div></form>';
  }else if(!sub){
   formHtml='<div class="deadline-note">Project submissions are currently closed. You can still register your team.</div>';
  }else{
   formHtml='<div class="deadline-note">This submission is '+escapeHtml(sub.status)+'. Only pending submissions can be edited while submissions are open.</div>';
  }
- const video=sub?(videoHref?'<p class="dash-help"><a href="'+escapeHtml(videoHref)+'" target="_blank" rel="noopener">▶ Open uploaded demo video</a></p>':(sub.video_url?'<p class="dash-help"><a href="'+escapeHtml(sub.video_url)+'" target="_blank" rel="noopener">▶ Open project video link</a></p>':'')):'';
+ const embedUrl=sub&&sub.video_url?getYoutubeEmbedUrl(sub.video_url):null;
+ const video=embedUrl?'<div class="youtube-player"><iframe src="'+escapeHtml(embedUrl)+'" title="'+escapeHtml(sub.title)+' video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>':(sub&&sub.video_url?'<p class="dash-help"><a href="'+escapeHtml(sub.video_url)+'" target="_blank" rel="noopener">Open submitted video</a></p>':'');
  return '<article class="group-panel"><div class="group-title"><h3>'+escapeHtml(group.name)+'</h3>'+status+'</div><ul class="roster">'+roster+'</ul>'+(sub?'<div style="font-size:13px"><strong>'+escapeHtml(sub.title)+'</strong><p class="dash-help">'+escapeHtml(sub.description)+'</p></div>'+video+feedback:'')+formHtml+'</article>';
 }
 async function loadDashboard(user){
@@ -167,20 +171,11 @@ document.getElementById('groupList').addEventListener('submit',async e=>{
  try{
   if(!submissionWindowOpen())throw new Error('Submissions are closed or the deadline has passed.');
   const fd=new FormData(form),groupId=form.dataset.group,submissionId=form.dataset.submission;
-  const title=String(fd.get('title')||'').trim(),description=String(fd.get('description')||'').trim(),videoUrl=String(fd.get('videoUrl')||'').trim(),videoFile=fd.get('videoFile');
+  const title=String(fd.get('title')||'').trim(),description=String(fd.get('description')||'').trim(),videoUrl=String(fd.get('videoUrl')||'').trim();
   if(!title||!description)throw new Error('Enter a project title and description.');
-  if(videoUrl&&videoFile&&videoFile.size)throw new Error('Use either a video link or an uploaded file, not both.');
-  if(!videoUrl&&!(videoFile&&videoFile.size)&&!form.dataset.oldVideo)throw new Error('Add a demo video link or upload a video file.');
-  if(videoUrl&&!/^https?:\/\//i.test(videoUrl))throw new Error('Video link must start with http:// or https://.');
-  if(videoFile&&videoFile.size){
-   const allowed=['video/mp4','video/webm','video/quicktime'];if(!allowed.includes(videoFile.type))throw new Error('Upload an MP4, WebM or MOV video.');
-   if(videoFile.size>104857600)throw new Error('The video must be 100 MB or smaller.');
-   const ext=videoFile.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
-   uploadedPath=groupId+'/'+crypto.randomUUID()+'.'+ext;
-   const upload=await supabase.storage.from('arena-project-videos').upload(uploadedPath,videoFile,{contentType:videoFile.type,upsert:false});
-   if(upload.error)throw upload.error;
-  }
-  const payload={title,description,video_url:videoUrl||null,video_path:uploadedPath||(videoUrl?null:(form.dataset.oldVideo||null)),status:'pending',updated_at:new Date().toISOString()};
+  if(!videoUrl)throw new Error('Paste your YouTube video link.');
+  if(!getYoutubeEmbedUrl(videoUrl))throw new Error('Enter a valid YouTube link (watch, youtu.be or Shorts).');
+  const payload={title,description,video_url:videoUrl,video_path:null,status:'pending',updated_at:new Date().toISOString()};
   let saved;
   if(submissionId)saved=await supabase.from('project_submissions').update(payload).eq('id',submissionId);
   else saved=await supabase.from('project_submissions').insert({...payload,group_id:groupId});
