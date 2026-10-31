@@ -97,3 +97,41 @@ body.dark-mode .admin-result{border-color:#344238}
 .member-edit-add{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;margin-top:10px}
 .admin-member-list{padding:10px 0;font-size:13px;display:grid;gap:5px}.admin-member-list span{color:var(--muted)}
 @media(max-width:560px){.member-edit-row{grid-template-columns:1fr 1fr}.member-edit-row button{justify-self:start}.member-edit-add{grid-template-columns:1fr}.navactions{gap:6px}.navactions .btn{padding:8px 10px;font-size:12px}}
+
+
+/* Contrast fixes for the process cards and closing CTA */
+.step{background:#fff;border-color:#e2e7df;box-shadow:0 8px 24px rgba(25,45,30,.035)}
+.step h3{color:#252923}
+.step p{color:#62685f}
+.cta{background:#315c48;color:#fff}
+.cta h2{color:#fff}
+.cta p{color:#e5eee7}
+.cta .btn{background:#fff;border-color:#fff;color:#244b38}
+body.dark-mode .step{background:#19221c;border-color:#344238;box-shadow:none}
+body.dark-mode .step h3{color:#edf2eb}
+body.dark-mode .step p{color:#b7c2b8}
+body.dark-mode .stepnum{color:#a6c6a8}
+body.dark-mode .cta{background:#244b38;color:#fff;border:1px solid #3e6950}
+body.dark-mode .cta h2{color:#fff}
+body.dark-mode .cta p{color:#e1ece3}
+body.dark-mode .cta .btn{background:#f3f7f2;border-color:#f3f7f2;color:#244b38}
+body.dark-mode .cta .btn:hover{background:#dce9dc;border-color:#dce9dc;color:#193b2a}
+@media(max-width:760px){
+ .sectionhead{margin-bottom:22px}
+ .section h2{font-size:clamp(29px,8vw,36px);line-height:1.12}
+ .steps{grid-template-columns:minmax(0,1fr);gap:12px}
+ .step{padding:20px;border-radius:14px}
+ .step h3{font-size:17px;margin:15px 0 7px}
+ .step p{font-size:14px;line-height:1.6}
+ .home-cta{padding-bottom:38px}
+ .cta{padding:26px 22px;border-radius:16px;display:flex;align-items:flex-start;flex-direction:column;gap:18px}
+ .cta h2{font-size:clamp(25px,7vw,32px);line-height:1.12}
+ .cta p{font-size:14px;line-height:1.6}
+ .cta .btn{margin-top:0;width:100%;min-height:46px;display:flex;align-items:center;justify-content:center}
+}
+@media(max-width:380px){
+ .wrap{width:calc(100% - 28px)}
+ .section{padding:44px 0}
+ .step{padding:18px}
+ .cta{padding:22px 18px}
+}
