@@ -138,18 +138,17 @@ async function renderGroupCard(group){
  if(memberResult.error)throw memberResult.error;
  if(submissionResult.error)throw submissionResult.error;
  const members=memberResult.data||[], sub=submissionResult.data;
- const editable=!!(sub&&sub.status==='pending'&&submissionWindowOpen());
- const canSubmit=submissionWindowOpen()&&(!sub||editable);
+ const editable=!!(sub&&(sub.status==='draft'||(sub.status==='pending'&&submissionWindowOpen())));
+ const canSubmit=!sub||editable;
  const status=sub?'<span class="dash-status '+escapeHtml(sub.status)+'">'+escapeHtml(sub.status)+'</span>':'<span class="dash-status">Not submitted</span>';
  let roster=members.map(m=>'<li><span>'+escapeHtml(m.member_name)+'</span><span>'+escapeHtml(m.roll_number)+'</span></li>').join('');
  let feedback=sub&&sub.admin_feedback?'<div class="deadline-note"><strong>Teacher feedback:</strong> '+escapeHtml(sub.admin_feedback)+'</div>':'';
  let formHtml='';
  if(canSubmit){
-  formHtml='<form class="submission-form" data-group="'+escapeHtml(group.id)+'" data-submission="'+escapeHtml(sub?sub.id:'')+'" data-old-video="'+escapeHtml(sub&&sub.video_path?sub.video_path:'')+'"><h3>'+(sub?'Edit pending submission':'Submit your project')+'</h3><label class="dash-field">Project title<input name="title" maxlength="140" required value="'+escapeHtml(sub?sub.title:'')+'" placeholder="Give your project a clear title"></label><label class="dash-field">Project description<textarea name="description" maxlength="5000" required placeholder="Explain the problem, your solution and how it works">'+escapeHtml(sub?sub.description:'')+'</textarea></label><label class="dash-field">YouTube video link<input name="videoUrl" type="url" required value="'+escapeHtml(sub&&sub.video_url?sub.video_url:'')+'" placeholder="https://www.youtube.com/watch?v=…"></label><p class="youtube-link-note">Paste a YouTube watch, youtu.be or Shorts link. Your video will appear as an embedded player on the project page.</p><button class="btn primary" type="submit">'+(sub?'Save changes':'Submit project')+'</button><div class="dash-message" role="status"></div></form>';
- }else if(!sub){
-  formHtml='<div class="deadline-note">Project submissions are currently closed. You can still register your team.</div>';
+  const draftMode=!submissionWindowOpen();
+  formHtml='<form class="submission-form" data-group="'+escapeHtml(group.id)+'" data-submission="'+escapeHtml(sub?sub.id:'')+'"><h3>'+(sub?'Project details':'Add your project')+'</h3><label class="dash-field">Project title<input name="title" maxlength="140" required value="'+escapeHtml(sub?sub.title:'')+'" placeholder="Give your project a clear title"></label><label class="dash-field">Project description<textarea name="description" maxlength="5000" required placeholder="Explain the problem, your solution and how it works">'+escapeHtml(sub?sub.description:'')+'</textarea></label><label class="dash-field">YouTube video link<input name="videoUrl" type="url" required value="'+escapeHtml(sub&&sub.video_url?sub.video_url:'')+'" placeholder="https://www.youtube.com/watch?v=…"></label><p class="youtube-link-note">Paste a YouTube watch, youtu.be or Shorts link. '+(draftMode?'Submissions are closed, so this will be saved privately as a draft.':'Your project will be sent to the review queue.')+'</p><button class="btn primary" type="submit">'+(draftMode?'Save private draft':sub?'Save changes':'Submit project')+'</button><div class="dash-message" role="status"></div></form>';
  }else{
-  formHtml='<div class="deadline-note">This submission is '+escapeHtml(sub.status)+'. Only pending submissions can be edited while submissions are open.</div>';
+  formHtml='<div class="deadline-note">This submission is '+escapeHtml(sub.status)+'. Approved or rejected submissions cannot be edited here.</div>';
  }
  const embedUrl=sub&&sub.video_url?getYoutubeEmbedUrl(sub.video_url):null;
  const video=embedUrl?'<div class="youtube-player"><iframe src="'+escapeHtml(embedUrl)+'" title="'+escapeHtml(sub.title)+' video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>':(sub&&sub.video_url?'<p class="dash-help"><a href="'+escapeHtml(sub.video_url)+'" target="_blank" rel="noopener">Open submitted video</a></p>':'');
@@ -165,7 +164,7 @@ async function loadDashboard(user){
  if(settings.error)throw settings.error;
  competitionSettings=settings.data;
  const notice=document.getElementById('competitionNotice');
- if(competitionSettings){notice.textContent=(competitionSettings.submissions_open?'Submissions are open':'Submissions are currently closed')+' · Deadline: '+formatDeadline(competitionSettings.submission_deadline)+(submissionWindowOpen()?'':' · You can still register a team.')}
+ if(competitionSettings){notice.textContent=(competitionSettings.submissions_open?'Submissions are open':'Submissions are currently closed')+' · Deadline: '+formatDeadline(competitionSettings.submission_deadline)+(submissionWindowOpen()?'':' · You can save project details as a private draft.')}
  const voteStats=await supabase.rpc('get_my_team_vote_counts');if(voteStats.error)throw voteStats.error;const statsEl=document.getElementById('teamVoteStats');const statRows=voteStats.data||[];statsEl.innerHTML='<h3>Your vote dashboard</h3>'+(statRows.length?'<table class="vote-table"><thead><tr><th>Team / project</th><th>Status</th><th>Votes</th></tr></thead><tbody>'+statRows.map(x=>'<tr><td>'+escapeHtml(x.project_title||x.team_name)+'</td><td>'+escapeHtml(x.submission_status||'Not submitted')+'</td><td><strong>'+Number(x.vote_count||0)+'</strong></td></tr>').join('')+'</tbody></table>':'<div class="dashboard-empty">Register your team to start tracking its votes.</div>');
  const list=document.getElementById('groupList');list.innerHTML='<div class="dashboard-empty">Loading your teams…</div>';
  const groups=await supabase.from('project_groups').select('id,name,created_at').eq('created_by',user.id).order('created_at',{ascending:false});
@@ -224,18 +223,18 @@ document.getElementById('groupList').addEventListener('submit',async e=>{
  const button=form.querySelector('button[type="submit"]'),messageEl=form.querySelector('.dash-message');button.disabled=true;button.textContent='Saving…';messageEl.textContent='';
  let uploadedPath=null;
  try{
-  if(!submissionWindowOpen())throw new Error('Submissions are closed or the deadline has passed.');
+  const isOpen=submissionWindowOpen();
   const fd=new FormData(form),groupId=form.dataset.group,submissionId=form.dataset.submission;
   const title=String(fd.get('title')||'').trim(),description=String(fd.get('description')||'').trim(),videoUrl=String(fd.get('videoUrl')||'').trim();
   if(!title||!description)throw new Error('Enter a project title and description.');
   if(!videoUrl)throw new Error('Paste your YouTube video link.');
   if(!getYoutubeEmbedUrl(videoUrl))throw new Error('Enter a valid YouTube link (watch, youtu.be or Shorts).');
-  const payload={title,description,video_url:videoUrl,video_path:null,status:'pending',updated_at:new Date().toISOString()};
+  const payload={title,description,video_url:videoUrl,video_path:null,status:isOpen?'pending':'draft',updated_at:new Date().toISOString()};
   let saved;
   if(submissionId)saved=await supabase.from('project_submissions').update(payload).eq('id',submissionId);
   else saved=await supabase.from('project_submissions').insert({...payload,group_id:groupId});
   if(saved.error)throw saved.error;
-  messageEl.textContent='Submission saved.';await loadDashboard(activeUser);
+  messageEl.textContent=isOpen?'Submission sent for review.':'Private draft saved. It will stay hidden until submissions open and you submit it.';await loadDashboard(activeUser);
  }catch(err){messageEl.textContent=err.message||'Could not save submission.';messageEl.style.color='#a33'}
  finally{button.disabled=false;button.textContent=form.dataset.submission?'Save changes':'Submit project'}
 });
