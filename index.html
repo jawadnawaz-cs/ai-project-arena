@@ -84,6 +84,11 @@ const SUPABASE_URL='https://bhwqbigitupdtarohzys.supabase.co';
 const SUPABASE_KEY='sb_publishable_KEXRUrOhjCb49chl-dCCRw_1m0xkxw2';
 const AUTH_REDIRECT_URL=window.location.origin+'/';
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+const dashboard=document.getElementById('studentDashboard');
+const voterDashboard=document.getElementById('voterDashboard');
+const roleChooser=document.getElementById('roleChooser');
+let activeUser=null, competitionSettings=null, currentArenaRole=null;
+const adminDashboard=document.getElementById('adminDashboard');let isArenaAdmin=false;
 
 
 
@@ -108,7 +113,7 @@ supabase.auth.onAuthStateChange((_event,session)=>{
     sessionStorage.removeItem('arena_selected_role');currentArenaRole=role;document.body.classList.add('authenticated-view');
     if(role==='team'){voterDashboard.classList.remove('visible');await loadDashboard(session.user);dashboard.scrollIntoView({behavior:'auto'})}
     else if(role==='voter'){dashboard.classList.remove('visible');await loadVoterDashboard(session.user);voterDashboard.scrollIntoView({behavior:'auto'})}
-   }catch(err){console.error('Arena role routing failed',err);const msg=document.getElementById('voterMessage');if(msg)msg.textContent=err.message||'Could not open your account dashboard.';document.body.classList.remove('authenticated-view')}
+   }catch(err){console.error('Arena role routing failed',err);const msg=document.getElementById('voterMessage');if(msg)msg.textContent=err.message||'Could not open your account dashboard.';document.body.classList.remove('authenticated-view');const toastEl=document.querySelector('.toast');if(toastEl){toastEl.textContent=err.message||'Could not open your dashboard.';toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),3500)}}
   },0);
  }else{
   nav.querySelectorAll('.user-chip').forEach(n=>n.remove());nav.querySelectorAll('[data-signout]').forEach(n=>n.remove());
@@ -117,10 +122,7 @@ supabase.auth.onAuthStateChange((_event,session)=>{
  }
 });
 
-const dashboard=document.getElementById('studentDashboard');
-const voterDashboard=document.getElementById('voterDashboard');
-const roleChooser=document.getElementById('roleChooser');
-let activeUser=null, competitionSettings=null, currentArenaRole=null;
+
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
 function dashMessage(id,text,isError){const el=document.getElementById(id);if(el){el.textContent=text||'';el.style.color=isError?'#a33':'var(--green)'}}
 function submissionWindowOpen(){if(!competitionSettings||!competitionSettings.submissions_open)return false;return !competitionSettings.submission_deadline||new Date(competitionSettings.submission_deadline).getTime()>=Date.now()}
@@ -239,7 +241,7 @@ document.getElementById('groupList').addEventListener('submit',async e=>{
 });
 
 
-const adminDashboard=document.getElementById('adminDashboard');let isArenaAdmin=false;
+
 function adminMsg(id,t,bad=false){const el=document.getElementById(id);if(el){el.textContent=t||'';el.style.color=bad?'#a33':'var(--green)'}}
 function localDate(v){if(!v)return '';const d=new Date(v);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
 function isoDate(v){return v?new Date(v).toISOString():null}
