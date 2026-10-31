@@ -55,7 +55,14 @@ function closeAuth() {
 }
 
 document.querySelectorAll("[data-auth]").forEach((b) =>
-  b.addEventListener("click", () => openAuth(b.dataset.auth))
+  b.addEventListener("click", () => {
+    if (b.dataset.role) sessionStorage.setItem("arena_selected_role", b.dataset.role);
+    if (!sessionStorage.getItem("arena_selected_role")) {
+      document.getElementById("roleChooser")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    openAuth(b.dataset.auth);
+  })
 );
 tabs.forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
 document.getElementById("authClose").addEventListener("click", closeAuth);
@@ -69,6 +76,14 @@ form.addEventListener("submit", async (e) => {
   const password = passwordInput.value;
   const accountType = document.getElementById("accountType").value;
   const fullName = document.getElementById("fullName").value.trim();
+  const arenaRole = sessionStorage.getItem("arena_selected_role");
+
+  if (!arenaRole) {
+    showMessage("Choose Voter or Uploader / Team before signing in.", true);
+    closeAuth();
+    document.getElementById("roleChooser")?.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
 
   if (mode === "signup" && accountType === "university" && !email.toLowerCase().endsWith(UNIVERSITY_DOMAIN)) {
     showMessage(`Use your official ${UNIVERSITY_DOMAIN} email address.`, true);
@@ -83,7 +98,7 @@ form.addEventListener("submit", async (e) => {
         email,
         password,
         options: {
-          data: { account_type: accountType, full_name: fullName },
+          data: { account_type: accountType, full_name: fullName, arena_role: arenaRole },
           emailRedirectTo: ARENA_REDIRECT,
         },
       });
@@ -109,6 +124,12 @@ form.addEventListener("submit", async (e) => {
 
 document.getElementById("googleSignIn").addEventListener("click", async () => {
   try {
+    if (!sessionStorage.getItem("arena_selected_role")) {
+      showMessage("Choose Voter or Uploader / Team before using Google sign-in.", true);
+      closeAuth();
+      document.getElementById("roleChooser")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: ARENA_REDIRECT },
