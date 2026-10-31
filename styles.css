@@ -80,3 +80,20 @@
  .admin-voting-controls .admin-actions .btn{width:100%}
  .admin-submission .group-title{flex-direction:column}
 }
+
+/* Arena dark mode */
+:root{color-scheme:light}
+body.dark-mode{--paper:#111713;--ink:#edf2eb;--muted:#aab5aa;--line:#303a32;--sage:#26372b;--green:#a6c6a8;background:#111713;color:#edf2eb;color-scheme:dark}
+body.dark-mode .topbar,body.dark-mode .dash-panel,body.dark-mode .group-panel,body.dark-mode .admin-stat,body.dark-mode .admin-panel,body.dark-mode .admin-submission,body.dark-mode .voter-card,body.dark-mode .vote-stats,body.dark-mode .role-card,body.dark-mode .project-card{background:#19221c;color:#edf2eb;border-color:#344238}
+body.dark-mode input,body.dark-mode textarea,body.dark-mode select{background:#121a15!important;color:#edf2eb!important;border-color:#3a493e!important}
+body.dark-mode .deadline-note,body.dark-mode .admin-voting-controls,body.dark-mode .approved-mini{background:#202d24;color:#dce7dc}
+body.dark-mode .roster li,body.dark-mode .vote-table td,body.dark-mode .vote-table th{border-color:#344238;color:#dce7dc}
+body.dark-mode .btn{color:#eaf2e9;border-color:#465449}
+body.dark-mode .btn.primary{background:#a6c6a8;color:#102015;border-color:#a6c6a8}
+body.dark-mode .admin-result{border-color:#344238}
+.member-edit-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto;gap:7px;margin:8px 0}
+.member-edit-row input,.member-edit-add input{min-width:0;width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;background:white;color:var(--ink)}
+.roster-editor{margin:12px 0 16px;padding:12px;border:1px solid var(--line);border-radius:9px;font-size:13px}
+.member-edit-add{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;margin-top:10px}
+.admin-member-list{padding:10px 0;font-size:13px;display:grid;gap:5px}.admin-member-list span{color:var(--muted)}
+@media(max-width:560px){.member-edit-row{grid-template-columns:1fr 1fr}.member-edit-row button{justify-self:start}.member-edit-add{grid-template-columns:1fr}.navactions{gap:6px}.navactions .btn{padding:8px 10px;font-size:12px}}
