@@ -110,6 +110,7 @@ form.addEventListener("submit", async (e) => {
           ? "Account created. You are signed in."
           : "Account created. Check your email to verify your address."
       );
+      if (data.session) setTimeout(closeAuth, 700);
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
