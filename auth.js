@@ -34,9 +34,11 @@ function setMode(next) {
   nameField.style.display = signup ? "" : "none";
   typeField.style.display = signup ? "" : "none";
   title.textContent = signup ? "Create your account" : "Welcome to the arena";
+  const selectedRole = sessionStorage.getItem("arena_selected_role");
+  const roleLabel = selectedRole === "team" ? "Uploader / Team" : selectedRole === "voter" ? "Voter" : "Arena";
   subtitle.textContent = signup
-    ? "Choose an account type and join the community."
-    : "Sign in to explore student projects and take part.";
+    ? "Create your " + roleLabel + " account to join the arena."
+    : "Sign in to continue as " + roleLabel + ".";
   submit.textContent = signup ? "Create account" : "Sign in";
   passwordInput.autocomplete = signup ? "new-password" : "current-password";
   showMessage("");
