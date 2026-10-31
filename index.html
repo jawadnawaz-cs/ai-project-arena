@@ -170,6 +170,7 @@ document.getElementById('groupList').addEventListener('submit',async e=>{
   const title=String(fd.get('title')||'').trim(),description=String(fd.get('description')||'').trim(),videoUrl=String(fd.get('videoUrl')||'').trim(),videoFile=fd.get('videoFile');
   if(!title||!description)throw new Error('Enter a project title and description.');
   if(videoUrl&&videoFile&&videoFile.size)throw new Error('Use either a video link or an uploaded file, not both.');
+  if(!videoUrl&&!(videoFile&&videoFile.size)&&!form.dataset.oldVideo)throw new Error('Add a demo video link or upload a video file.');
   if(videoUrl&&!/^https?:\/\//i.test(videoUrl))throw new Error('Video link must start with http:// or https://.');
   if(videoFile&&videoFile.size){
    const allowed=['video/mp4','video/webm','video/quicktime'];if(!allowed.includes(videoFile.type))throw new Error('Upload an MP4, WebM or MOV video.');
