@@ -46,3 +46,37 @@
 .admin-access-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px;border:1px solid var(--line);border-radius:8px;font-size:13px}
 .admin-access-row button{flex-shrink:0}
 @media(max-width:600px){.admin-access-row{align-items:flex-start;flex-direction:column}.admin-access-form{align-items:stretch;flex-direction:column}}
+
+/* Competition control and gallery refinements */
+.admin-submission{min-width:0}
+.admin-submission p{overflow-wrap:anywhere}
+.admin-list,.approved-gallery-list{display:grid;gap:10px;min-width:0}
+.approved-mini{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;font-size:13px}
+.approved-mini>div:first-child{min-width:0;display:grid;gap:2px}
+.approved-mini strong{overflow-wrap:anywhere}
+.approved-mini span:not(.dash-status){color:var(--muted);font-size:12px}
+.voter-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));align-items:start}
+.voter-card{min-width:0;overflow:hidden}
+.voter-card h3,.voter-card p{overflow-wrap:anywhere}
+.voter-card iframe{display:block;width:100%;aspect-ratio:16/9;height:auto;object-fit:cover}
+.admin-actions .btn{min-height:40px}
+.admin-settings{min-width:0}
+.admin-settings label{min-width:0}
+.admin-settings input{min-width:0}
+@media(max-width:760px){
+ .admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-submission{padding:15px}
+ .admin-submission .group-title{align-items:flex-start}
+ .admin-settings{grid-template-columns:1fr}
+ .approved-mini{grid-template-columns:minmax(0,1fr) auto}
+ .approved-mini button{grid-column:1/-1;justify-self:start}
+ .admin-actions{width:100%}
+ .admin-actions .btn{flex:1}
+ .voter-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:420px){
+ .admin-grid{grid-template-columns:1fr}
+ .admin-voting-controls .admin-actions{display:grid;grid-template-columns:1fr;width:100%}
+ .admin-voting-controls .admin-actions .btn{width:100%}
+ .admin-submission .group-title{flex-direction:column}
+}
