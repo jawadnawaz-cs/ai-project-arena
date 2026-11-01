@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#f8f7f3" />
+  <meta name="theme-color" content="#f8f9fb" />
   <meta name="description" content="AI Project Arena — Official university student innovation & research showcase." />
   <title>AI Project Arena — University Innovation Showcase</title>
   <link rel="stylesheet" href="styles.css" />
@@ -50,7 +50,7 @@
         <div class="meta">
           <div>
             <strong>Verified Identity</strong>
-            Email OTP, Password &amp; OAuth
+            University &amp; OAuth Accounts
           </div>
           <div>
             <strong>Peer &amp; Faculty Review</strong>
@@ -168,7 +168,7 @@
                 Team / Group Name
                 <input name="groupName" maxlength="80" required placeholder="e.g. Neural Dynamics Lab" />
               </label>
-              <div style="font-size:12.5px;font-weight:700;margin:16px 0 6px;color:var(--ink-secondary)">Team Roster (Lead first)</div>
+              <div style="font-size:13px;font-weight:700;margin:16px 0 6px;color:var(--ink-secondary)">Team Roster (Lead first)</div>
               <div id="memberRows">
                 <div class="member-row">
                   <input name="memberName" required maxlength="100" placeholder="Team lead full name" />
@@ -356,14 +356,14 @@
           <div class="admin-panel-head">
             <div>
               <h3>Submission Moderation Queue</h3>
-              <p class="dash-help" style="margin:4px 0 0">Verify video playback, check team roll numbers, and approve or return submissions with structured feedback.</p>
+              <p class="dash-help" style="margin:4px 0 0">Pending submissions are shown by default. Use the filter to view or delete rejected entries.</p>
             </div>
           </div>
           <div class="admin-filter-bar">
             <input type="search" id="adminQueueSearch" placeholder="Filter queue by project title, team name, or roll number…" aria-label="Search review queue" />
             <select id="adminQueueStatusFilter" aria-label="Filter by status">
+              <option value="pending" selected>Pending review only</option>
               <option value="all">All non-approved (Pending + Rejected + Draft)</option>
-              <option value="pending">Pending review only</option>
               <option value="rejected">Rejected only</option>
               <option value="draft">Drafts only</option>
             </select>
@@ -434,7 +434,7 @@
       <div class="cta">
         <div>
           <h2>Ready to showcase your engineering work?</h2>
-          <p>Sign in with your university email, OTP code, or Google account to register your team or evaluate peers.</p>
+          <p>Sign in with your university email or Google account to register your team or evaluate peers.</p>
         </div>
         <button class="btn" id="ctaChooseRole" type="button">Get Started ↗</button>
       </div>
@@ -454,7 +454,7 @@
   </footer>
 
   <!-- ======================================================================
-       ENHANCED AUTHENTICATION MODAL (PASSWORD + EMAIL OTP + RECOVERY)
+       AUTHENTICATION MODAL (SIGN IN, CREATE ACCOUNT, FORGOT PASSWORD OTP)
        ====================================================================== -->
   <section class="auth-modal" id="authModal" aria-hidden="true">
     <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -463,17 +463,16 @@
       <h2 id="authTitle">Welcome to the Arena</h2>
       <p id="authSubtitle">Select your participation role and sign in to continue.</p>
 
-      <!-- In-Modal Role Switcher (prevents getting kicked out when role isn't chosen yet) -->
-      <div class="auth-role-picker" role="group" aria-label="Participation Role">
+      <!-- In-Modal Role Switcher -->
+      <div class="auth-role-picker" id="authRolePicker" role="group" aria-label="Participation Role">
         <button type="button" class="auth-role-btn active" data-pick-role="voter">✓ Voter / Evaluator</button>
         <button type="button" class="auth-role-btn" data-pick-role="team">✦ Uploader / Team Lead</button>
       </div>
 
-      <!-- Auth Mode Tabs -->
-      <div class="auth-tabs" role="tablist">
-        <button type="button" class="active" data-mode="signin">Password</button>
-        <button type="button" data-mode="otp">Email OTP</button>
-        <button type="button" data-mode="signup">Create Account</button>
+      <!-- 2 Auth Mode Tabs (Email OTP is exclusively inside Forgot Password) -->
+      <div class="auth-tabs" id="authModeTabs" role="tablist">
+        <button type="button" class="active" data-mode="signin">Sign in</button>
+        <button type="button" data-mode="signup">Create account</button>
       </div>
 
       <button id="googleSignIn" type="button">
@@ -502,6 +501,11 @@
           <input id="email" type="email" autocomplete="email" required placeholder="you@example.com" />
         </label>
 
+        <label id="otpCodeField" style="display:none">
+          Email Recovery OTP Code
+          <input id="otpCode" class="otp-code-input" type="text" inputmode="numeric" pattern="[0-9]{6,8}" maxlength="8" autocomplete="one-time-code" placeholder="123456" />
+        </label>
+
         <label id="passwordField">
           <span id="passwordLabelText">Password</span>
           <div class="password-field-wrap">
@@ -515,14 +519,10 @@
           <input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Re-enter new password" />
         </label>
 
-        <label id="otpCodeField" style="display:none">
-          One-Time Verification Code (OTP)
-          <input id="otpCode" class="otp-code-input" type="text" inputmode="numeric" pattern="[0-9]{6,8}" maxlength="8" autocomplete="one-time-code" placeholder="123456" />
-        </label>
-
         <div class="auth-aux-links" id="authAuxLinks">
           <button type="button" class="auth-link-btn" id="forgotPasswordLink">Forgot password?</button>
-          <button type="button" class="auth-link-btn" id="resendOtpLink" style="display:none">Resend code</button>
+          <button type="button" class="auth-link-btn" id="backToSignInLink" style="display:none">← Back to Sign in</button>
+          <button type="button" class="auth-link-btn" id="resendOtpLink" style="display:none">Resend OTP code</button>
         </div>
 
         <button id="authSubmit" type="submit">Sign in</button>

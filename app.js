@@ -29,6 +29,22 @@ let cachedAdminGroupsMap = new Map();
 let cachedAdminMembersByGroup = new Map();
 let cachedAdminResults = [];
 
+const ADMIN_DISMISSED_KEY = 'arena_admin_dismissed_ids';
+
+function getDismissedRejectedIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(ADMIN_DISMISSED_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function addDismissedRejectedId(id) {
+  const set = getDismissedRejectedIds();
+  set.add(String(id));
+  localStorage.setItem(ADMIN_DISMISSED_KEY, JSON.stringify([...set]));
+}
+
 function showToast(text, duration = 3200) {
   const toastEl = document.querySelector('.toast');
   if (!toastEl) return;
@@ -100,41 +116,81 @@ function getYoutubeEmbedUrl(raw) {
 }
 
 /* ==========================================================================
-   AUTH STATE ROUTING & HEADER CONTROLS
+   AUTH STATE ROUTING & HEADER PROFILE ICON MENU
    ========================================================================== */
+
+// Close profile menu when clicking outside
+document.addEventListener('click', (e) => {
+  const menu = document.querySelector('.profile-menu-wrap.open');
+  if (menu && !menu.contains(e.target)) {
+    menu.classList.remove('open');
+    menu.querySelector('.profile-trigger')?.setAttribute('aria-expanded', 'false');
+  }
+});
 
 supabase.auth.onAuthStateChange((_event, session) => {
   const nav = document.querySelector('.navactions');
   if (!nav) return;
 
-  nav.querySelectorAll('.user-chip').forEach((n) => n.remove());
-  nav.querySelectorAll('[data-signout]').forEach((n) => n.remove());
+  nav.querySelectorAll('.profile-menu-wrap, .user-chip, [data-signout]').forEach((n) => n.remove());
 
   if (session) {
+    // Hide unauthenticated Sign In and Join Arena buttons
     nav.querySelectorAll('#headerChooseRole, #headerSignIn').forEach((b) => (b.hidden = true));
 
-    const chip = document.createElement('span');
-    chip.className = 'user-chip';
-    chip.innerHTML = `<span class="role-pill" id="headerRoleBadge">Arena</span><span>${escapeHtml(session.user.email)}</span>`;
-    nav.prepend(chip);
+    const userEmail = session.user.email || 'Signed-in User';
+    const initial = userEmail.charAt(0).toUpperCase();
 
-    const signout = document.createElement('button');
-    signout.className = 'btn';
-    signout.dataset.signout = 'true';
-    signout.textContent = 'Sign out';
-    signout.addEventListener('click', async () => {
+    const profileWrap = document.createElement('div');
+    profileWrap.className = 'profile-menu-wrap';
+    profileWrap.innerHTML =
+      '<button type="button" class="profile-trigger" aria-expanded="false" aria-label="Account profile menu">' +
+      '<span class="profile-avatar">' + escapeHtml(initial) + '</span>' +
+      '<span class="profile-trigger-role" id="headerRoleBadge">Arena</span>' +
+      '<span class="profile-trigger-caret" aria-hidden="true">▾</span>' +
+      '</button>' +
+      '<div class="profile-dropdown" role="menu">' +
+      '<div class="profile-dropdown-header">' +
+      '<div class="profile-dropdown-label"><span>Signed in as</span><span class="role-pill" id="dropdownRolePill">Arena</span></div>' +
+      '<div class="profile-dropdown-email">' + escapeHtml(userEmail) + '</div>' +
+      '</div>' +
+      '<div class="profile-dropdown-actions">' +
+      '<button type="button" class="profile-dropdown-btn" data-go-workspace><span>Go to My Workspace</span><span>↗</span></button>' +
+      '<button type="button" class="profile-dropdown-btn signout-item" data-signout="true"><span>Sign out</span><span>→</span></button>' +
+      '</div>' +
+      '</div>';
+
+    const triggerBtn = profileWrap.querySelector('.profile-trigger');
+    triggerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = profileWrap.classList.toggle('open');
+      triggerBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    profileWrap.querySelector('[data-go-workspace]').addEventListener('click', () => {
+      profileWrap.classList.remove('open');
+      if (isArenaAdmin) adminDashboard?.scrollIntoView({ behavior: 'smooth' });
+      else if (currentArenaRole === 'team') dashboard?.scrollIntoView({ behavior: 'smooth' });
+      else if (currentArenaRole === 'voter') voterDashboard?.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    profileWrap.querySelector('[data-signout]').addEventListener('click', async () => {
+      profileWrap.classList.remove('open');
       await supabase.auth.signOut();
       showToast('Signed out of AI Project Arena.');
     });
-    nav.append(signout);
+
+    nav.append(profileWrap);
 
     setTimeout(async () => {
       try {
         await checkArenaAdmin();
         const roleBadge = document.getElementById('headerRoleBadge');
+        const dropdownPill = document.getElementById('dropdownRolePill');
 
         if (isArenaAdmin) {
           if (roleBadge) roleBadge.textContent = 'Admin';
+          if (dropdownPill) dropdownPill.textContent = 'Admin';
           document.body.classList.add('authenticated-view');
           dashboard?.classList.remove('visible');
           voterDashboard?.classList.remove('visible');
@@ -148,12 +204,11 @@ supabase.auth.onAuthStateChange((_event, session) => {
         if (error) throw error;
 
         if (!role && selectedRole) {
-          const assigned = await supabase.rpc('set_arena_role', { requested_role: selectedRole });
+          const assigned = await supabase.rpc('set_arena_role',{ requested_role: selectedRole });
           if (assigned.error) throw assigned.error;
           role = assigned.data;
         }
 
-        // If user signed in directly without an existing role, assign their default or voter role
         if (!role && !selectedRole) {
           const fallbackRole = session.user?.user_metadata?.arena_role || 'voter';
           const assigned = await supabase.rpc('set_arena_role', { requested_role: fallbackRole });
@@ -168,7 +223,9 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
         sessionStorage.removeItem('arena_selected_role');
         currentArenaRole = role;
-        if (roleBadge) roleBadge.textContent = role === 'team' ? 'Team Lead' : 'Voter';
+        const labelText = role === 'team' ? 'Team Lead' : 'Voter';
+        if (roleBadge) roleBadge.textContent = labelText;
+        if (dropdownPill) dropdownPill.textContent = labelText;
 
         document.body.classList.add('authenticated-view');
         if (role === 'team') {
@@ -189,8 +246,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
       }
     }, 0);
   } else {
-    nav.querySelectorAll('.user-chip').forEach((n) => n.remove());
-    nav.querySelectorAll('[data-signout]').forEach((n) => n.remove());
+    nav.querySelectorAll('.profile-menu-wrap, .user-chip, [data-signout]').forEach((n) => n.remove());
     nav.querySelectorAll('#headerChooseRole, #headerSignIn').forEach((b) => (b.hidden = false));
     document.body.classList.remove('authenticated-view');
     dashboard?.classList.remove('visible');
@@ -230,7 +286,6 @@ function updateTeamStepper(hasGroups, hasSubmission, isApproved) {
   if (steps.length < 4) return;
 
   steps.forEach((s) => s.classList.remove('done', 'active'));
-  // Step 1: Account Verified (always done when on dashboard)
   steps[0].classList.add('done');
 
   if (!hasGroups) {
@@ -367,7 +422,7 @@ async function renderGroupCard(group) {
       '<div class="dash-message" role="status"></div>' +
       '</div>' +
       (sub
-        ? '<div style="font-size:13.5px;margin-top:10px"><strong>' +
+        ? '<div style="font-size:14px;margin-top:10px"><strong>' +
           escapeHtml(sub.title) +
           '</strong><p class="dash-help" style="margin-top:4px">' +
           escapeHtml(sub.description) +
@@ -1027,10 +1082,12 @@ function renderAdminQueue() {
   if (!list) return;
 
   const query = (document.getElementById('adminQueueSearch')?.value || '').trim().toLowerCase();
-  const statusFilter = document.getElementById('adminQueueStatusFilter')?.value || 'all';
+  const statusFilter = document.getElementById('adminQueueStatusFilter')?.value || 'pending';
+  const dismissedIds = getDismissedRejectedIds();
 
   const reviewQueue = cachedAdminSubmissions.filter((x) => {
     if (x.status === 'approved') return false;
+    if (dismissedIds.has(String(x.id))) return false;
     if (statusFilter !== 'all' && x.status !== statusFilter) return false;
     if (!query) return true;
     const teamName = cachedAdminGroupsMap.get(x.group_id) || '';
@@ -1041,7 +1098,10 @@ function renderAdminQueue() {
   });
 
   if (!reviewQueue.length) {
-    list.innerHTML = '<div class="dashboard-empty">No submissions match the current queue filter.</div>';
+    list.innerHTML =
+      statusFilter === 'pending'
+        ? '<div class="dashboard-empty">No pending projects waiting for review. Switch the filter above to "Rejected only" or "All non-approved" if you want to inspect or delete rejected entries.</div>'
+        : '<div class="dashboard-empty">No submissions match the current queue filter.</div>';
     return;
   }
 
@@ -1052,6 +1112,8 @@ function renderAdminQueue() {
       return (
         '<article class="admin-submission" data-submission-id="' +
         escapeHtml(x.id) +
+        '" data-group-id="' +
+        escapeHtml(x.group_id) +
         '">' +
         '<div class="group-title">' +
         '<div>' +
@@ -1104,8 +1166,9 @@ function renderAdminQueue() {
         '</div>' +
         '<div class="admin-actions">' +
         '<button class="btn primary" data-review="approved" type="button">✓ Approve for Gallery</button>' +
-        '<button class="btn danger" data-review="rejected" type="button">✕ Return / Reject</button>' +
-        '<button class="btn" data-review="pending" type="button">Keep Pending</button>' +
+        '<button class="btn danger" data-review="rejected" type="button">✕ Reject</button>' +
+        '<button class="btn" data-review="pending" type="button">Set Pending</button>' +
+        '<button class="btn danger" data-delete-submission type="button" style="margin-left:auto">🗑 Delete Submission</button>' +
         '</div>' +
         '<div class="admin-message" role="status"></div>' +
         '</article>'
@@ -1134,7 +1197,8 @@ async function loadAdminDashboard() {
   if (m.error) throw m.error;
 
   const s = a.data;
-  cachedAdminSubmissions = b.data || [];
+  const dismissedIds = getDismissedRejectedIds();
+  cachedAdminSubmissions = (b.data || []).filter((x) => !dismissedIds.has(String(x.id)));
   cachedAdminGroupsMap = new Map((g.data || []).map((x) => [x.id, x.name]));
   cachedAdminMembersByGroup = new Map();
   (m.data || []).forEach((x) => {
@@ -1285,10 +1349,7 @@ document.getElementById('saveAdminSettings')?.addEventListener('click', async ()
       .single();
     if (error) throw error;
     if (!data) throw new Error('Settings were not saved. Check admin access.');
-    adminMsg(
-      'adminSettingsMessage',
-      'Competition title and submission window saved.'
-    );
+    adminMsg('adminSettingsMessage', 'Competition title and submission window saved.');
     showToast('Competition settings saved.');
     await loadAdminDashboard();
   } catch (e) {
@@ -1307,6 +1368,41 @@ async function handleAdminReviewClick(e) {
     if (textarea) {
       textarea.value = presetBtn.dataset.preset;
       textarea.focus();
+    }
+    return;
+  }
+
+  // Handle Delete Submission button
+  const deleteBtn = e.target.closest('[data-delete-submission]');
+  if (deleteBtn) {
+    const card = deleteBtn.closest('[data-submission-id]');
+    if (!card) return;
+    const subId = card.dataset.submissionId;
+    const titleText = card.querySelector('h4')?.textContent || 'this submission';
+    if (!window.confirm(`Permanently delete "${titleText}" from the admin panel?`)) return;
+
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = 'Deleting…';
+    const msg = card.querySelector('.admin-message');
+    try {
+      const { data: deletedRows, error } = await supabase
+        .from('project_submissions')
+        .delete()
+        .eq('id', subId)
+        .select('id');
+
+      // If RLS blocks direct hard-delete or returns 0 rows, also record in dismissed list so it never clutters the admin queue
+      if (error || !deletedRows || !deletedRows.length) {
+        addDismissedRejectedId(subId);
+      }
+      cachedAdminSubmissions = cachedAdminSubmissions.filter((x) => String(x.id) !== String(subId));
+      showToast('Submission deleted from admin panel.');
+      await loadAdminDashboard();
+    } catch (err) {
+      addDismissedRejectedId(subId);
+      cachedAdminSubmissions = cachedAdminSubmissions.filter((x) => String(x.id) !== String(subId));
+      showToast('Submission removed from admin queue.');
+      renderAdminQueue();
     }
     return;
   }
@@ -1330,7 +1426,11 @@ async function handleAdminReviewClick(e) {
     if (error) throw error;
     if (!data) throw new Error('No submission was updated. Refresh and try again.');
     if (msg) msg.textContent = 'Submission status updated.';
-    showToast(`Project marked as ${btn.dataset.review}.`);
+    showToast(
+      btn.dataset.review === 'rejected'
+        ? 'Project rejected and moved out of Pending queue.'
+        : `Project marked as ${btn.dataset.review}.`
+    );
     await loadAdminDashboard();
   } catch (err) {
     if (msg) {
