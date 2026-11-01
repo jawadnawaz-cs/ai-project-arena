@@ -2374,6 +2374,112 @@ footer {
   }
 }
 
+/* ==========================================================================
+   REJECTED VIDEOS GALLERY & DARK MODE READABILITY UPGRADES
+   ========================================================================== */
+
+body.dark-mode {
+  --ink: #f8fafc;
+  --ink-secondary: #e2e8f0;
+  --muted: #a1b0c4;
+}
+
+.rejected-gallery-panel {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+}
+
+.rejected-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.rejected-video-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--line));
+  box-shadow: var(--shadow-xs);
+}
+
+.rejected-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rejected-card-top h4 {
+  margin: 0 0 3px;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.rejected-video-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto !important;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+.rejected-desc {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rejected-feedback-note {
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.rejected-card-actions {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rejected-card-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .rejected-gallery-grid {
+    grid-template-columns: 1fr;
+  }
+  .rejected-Gallery-panel .admin-panel-head,
+  .rejected-gallery-panel .admin-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  #deleteAllRejectedBtn {
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
@@ -2381,4 +2487,5 @@ footer {
     animation: none !important;
   }
 }
+
 

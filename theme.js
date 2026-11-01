@@ -1,9 +1,13 @@
-const key = 'arena-theme';
+const key = 'arena-theme-v2';
 const button = document.getElementById('themeToggle');
 
 function applyTheme(mode) {
-  const isDark = mode === 'dark';
+  const isDark = mode !== 'light';
   document.body.classList.toggle('dark-mode', isDark);
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) {
+    metaTheme.setAttribute('content', isDark ? '#0b0f17' : '#f8f9fb');
+  }
   if (button) {
     button.innerHTML = isDark
       ? '<span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Light mode</span>'
@@ -12,7 +16,7 @@ function applyTheme(mode) {
   }
 }
 
-const saved = localStorage.getItem(key) || 'light';
+const saved = localStorage.getItem(key) || 'dark';
 applyTheme(saved);
 
 button?.addEventListener('click', () => {

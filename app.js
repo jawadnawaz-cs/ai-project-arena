@@ -1086,7 +1086,8 @@ function renderAdminQueue() {
   const dismissedIds = getDismissedRejectedIds();
 
   const reviewQueue = cachedAdminSubmissions.filter((x) => {
-    if (x.status === 'approved') return false;
+    // Approved and Rejected live in their own dedicated galleries
+    if (x.status === 'approved' || x.status === 'rejected') return false;
     if (dismissedIds.has(String(x.id))) return false;
     if (statusFilter !== 'all' && x.status !== statusFilter) return false;
     if (!query) return true;
@@ -1100,7 +1101,7 @@ function renderAdminQueue() {
   if (!reviewQueue.length) {
     list.innerHTML =
       statusFilter === 'pending'
-        ? '<div class="dashboard-empty">No pending projects waiting for review. Switch the filter above to "Rejected only" or "All non-approved" if you want to inspect or delete rejected entries.</div>'
+        ? '<div class="dashboard-empty">No pending projects waiting for review. Rejected videos are stored in the Rejected Videos Gallery below.</div>'
         : '<div class="dashboard-empty">No submissions match the current queue filter.</div>';
     return;
   }
@@ -1166,15 +1167,108 @@ function renderAdminQueue() {
         '</div>' +
         '<div class="admin-actions">' +
         '<button class="btn primary" data-review="approved" type="button">✓ Approve for Gallery</button>' +
-        '<button class="btn danger" data-review="rejected" type="button">✕ Reject</button>' +
+        '<button class="btn danger" data-review="rejected" type="button">✕ Reject to Gallery</button>' +
         '<button class="btn" data-review="pending" type="button">Set Pending</button>' +
-        '<button class="btn danger" data-delete-submission type="button" style="margin-left:auto">🗑 Delete Submission</button>' +
+        '<button class="btn danger" data-delete-submission type="button" style="margin-left:auto">🗑 Delete Video</button>' +
         '</div>' +
         '<div class="admin-message" role="status"></div>' +
         '</article>'
       );
     })
     .join('');
+}
+
+function renderRejectedGallery() {
+  const rejectedContainer = document.getElementById('adminRejectedGallery');
+  const deleteAllBtn = document.getElementById('deleteAllRejectedBtn');
+  const rejectedTabBtn = document.getElementById('rejectedGalleryTabBtn');
+  const dismissedIds = getDismissedRejectedIds();
+
+  const rejectedList = cachedAdminSubmissions.filter(
+    (x) => x.status === 'rejected' && !dismissedIds.has(String(x.id))
+  );
+
+  if (rejectedTabBtn) {
+    rejectedTabBtn.textContent = rejectedList.length
+      ? `Rejected Videos Gallery (${rejectedList.length})`
+      : 'Rejected Videos Gallery';
+  }
+
+  if (deleteAllBtn) {
+    deleteAllBtn.disabled = rejectedList.length === 0;
+  }
+
+  if (!rejectedContainer) return;
+
+  if (!rejectedList.length) {
+    rejectedContainer.innerHTML =
+      '<div class="dashboard-empty">No rejected videos in the gallery. When you reject a submission, its video stays here until you delete or restore it.</div>';
+    return;
+  }
+
+  rejectedContainer.innerHTML = rejectedList
+    .map((x) => {
+      const embed = getYoutubeEmbedUrl(x.video_url || '');
+      const teamName = cachedAdminGroupsMap.get(x.group_id) || 'Student Team';
+      return (
+        '<article class="rejected-video-card" data-submission-id="' +
+        escapeHtml(x.id) +
+        '">' +
+        '<div class="rejected-card-top">' +
+        '<div>' +
+        '<h4>' +
+        escapeHtml(x.title) +
+        '</h4>' +
+        '<span class="dash-help">' +
+        escapeHtml(teamName) +
+        ' · ' +
+        escapeHtml(new Date(x.submitted_at).toLocaleDateString()) +
+        '</span>' +
+        '</div>' +
+        '<span class="dash-status rejected">Rejected</span>' +
+        '</div>' +
+        (embed
+          ? '<iframe class="admin-video rejected-video-frame" src="' +
+            escapeHtml(embed) +
+            '" title="' +
+            escapeHtml(x.title) +
+            '" loading="lazy" allowfullscreen></iframe>'
+          : x.video_url
+          ? '<p class="dash-help"><a href="' +
+            escapeHtml(x.video_url) +
+            '" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">Open Video Link ↗</a></p>'
+          : '') +
+        '<p class="rejected-desc">' +
+        escapeHtml(x.description) +
+        '</p>' +
+        (x.admin_feedback
+          ? '<div class="rejected-feedback-note"><strong>Rejection Note:</strong> ' +
+            escapeHtml(x.admin_feedback) +
+            '</div>'
+          : '') +
+        '<div class="rejected-card-actions">' +
+        '<button class="btn sm" data-review="pending" type="button">↩ Restore to Pending</button>' +
+        '<button class="btn sm danger" data-delete-submission type="button">🗑 Delete Video</button>' +
+        '</div>' +
+        '<div class="admin-message" role="status"></div>' +
+        '</article>'
+      );
+    })
+    .join('');
+}
+
+function updateAdminKpiCounters() {
+  const dismissedIds = getDismissedRejectedIds();
+  const activeSubs = cachedAdminSubmissions.filter((x) => !dismissedIds.has(String(x.id)));
+  const totalEl = document.getElementById('adminTotal');
+  const pendingEl = document.getElementById('adminPending');
+  const approvedEl = document.getElementById('adminApproved');
+  const rejectedEl = document.getElementById('adminRejected');
+
+  if (totalEl) totalEl.textContent = activeSubs.length;
+  if (pendingEl) pendingEl.textContent = activeSubs.filter((x) => x.status === 'pending').length;
+  if (approvedEl) approvedEl.textContent = activeSubs.filter((x) => x.status === 'approved').length;
+  if (rejectedEl) rejectedEl.textContent = activeSubs.filter((x) => x.status === 'rejected').length;
 }
 
 document.getElementById('adminQueueSearch')?.addEventListener('input', renderAdminQueue);
@@ -1222,19 +1316,9 @@ async function loadAdminDashboard() {
   document.getElementById('adminVotingOpen').checked = !!s.voting_open;
   document.getElementById('adminResultsPublished').checked = !!s.results_published;
 
-  document.getElementById('adminTotal').textContent = cachedAdminSubmissions.length;
-  document.getElementById('adminPending').textContent = cachedAdminSubmissions.filter(
-    (x) => x.status === 'pending'
-  ).length;
-  document.getElementById('adminApproved').textContent = cachedAdminSubmissions.filter(
-    (x) => x.status === 'approved'
-  ).length;
-  const rejEl = document.getElementById('adminRejected');
-  if (rejEl) {
-    rejEl.textContent = cachedAdminSubmissions.filter((x) => x.status === 'rejected').length;
-  }
-
+  updateAdminKpiCounters();
   renderAdminQueue();
+  renderRejectedGallery();
 
   const approved = cachedAdminSubmissions.filter((x) => x.status === 'approved');
   const approvedList = document.getElementById('adminApprovedGallery');
@@ -1359,6 +1443,49 @@ document.getElementById('saveAdminSettings')?.addEventListener('click', async ()
   }
 });
 
+// Delete All Rejected Videos button handler
+document.getElementById('deleteAllRejectedBtn')?.addEventListener('click', async () => {
+  const rejectedItems = cachedAdminSubmissions.filter((x) => x.status === 'rejected');
+  if (!rejectedItems.length) {
+    showToast('No rejected videos to delete.');
+    return;
+  }
+  if (
+    !window.confirm(
+      `Permanently delete all ${rejectedItems.length} rejected video${rejectedItems.length === 1 ? '' : 's'} from the Rejected Videos Gallery?`
+    )
+  ) {
+    return;
+  }
+
+  const btn = document.getElementById('deleteAllRejectedBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Deleting all…';
+  }
+
+  try {
+    const ids = rejectedItems.map((x) => x.id);
+    ids.forEach((id) => addDismissedRejectedId(id));
+    await supabase.from('project_submissions').delete().in('id', ids);
+    cachedAdminSubmissions = cachedAdminSubmissions.filter((x) => x.status !== 'rejected');
+    updateAdminKpiCounters();
+    renderAdminQueue();
+    renderRejectedGallery();
+    showToast(`Deleted ${ids.length} rejected video${ids.length === 1 ? '' : 's'}.`);
+  } catch {
+    cachedAdminSubmissions = cachedAdminSubmissions.filter((x) => x.status !== 'rejected');
+    updateAdminKpiCounters();
+    renderAdminQueue();
+    renderRejectedGallery();
+    showToast('All rejected videos removed from gallery.');
+  } finally {
+    if (btn) {
+      btn.textContent = '🗑 Delete All Rejected Videos';
+    }
+  }
+});
+
 async function handleAdminReviewClick(e) {
   // Handle feedback preset chips
   const presetBtn = e.target.closest('[data-preset]');
@@ -1372,37 +1499,31 @@ async function handleAdminReviewClick(e) {
     return;
   }
 
-  // Handle Delete Submission button
+  // Handle Delete Video / Submission button
   const deleteBtn = e.target.closest('[data-delete-submission]');
   if (deleteBtn) {
     const card = deleteBtn.closest('[data-submission-id]');
     if (!card) return;
     const subId = card.dataset.submissionId;
-    const titleText = card.querySelector('h4')?.textContent || 'this submission';
-    if (!window.confirm(`Permanently delete "${titleText}" from the admin panel?`)) return;
+    const titleText = card.querySelector('h4')?.textContent || 'this video submission';
+    if (!window.confirm(`Permanently delete "${titleText}"?`)) return;
 
     deleteBtn.disabled = true;
     deleteBtn.textContent = 'Deleting…';
-    const msg = card.querySelector('.admin-message');
     try {
-      const { data: deletedRows, error } = await supabase
-        .from('project_submissions')
-        .delete()
-        .eq('id', subId)
-        .select('id');
-
-      // If RLS blocks direct hard-delete or returns 0 rows, also record in dismissed list so it never clutters the admin queue
-      if (error || !deletedRows || !deletedRows.length) {
-        addDismissedRejectedId(subId);
-      }
-      cachedAdminSubmissions = cachedAdminSubmissions.filter((x) => String(x.id) !== String(subId));
-      showToast('Submission deleted from admin panel.');
-      await loadAdminDashboard();
-    } catch (err) {
       addDismissedRejectedId(subId);
+      await supabase.from('project_submissions').delete().eq('id', subId);
       cachedAdminSubmissions = cachedAdminSubmissions.filter((x) => String(x.id) !== String(subId));
-      showToast('Submission removed from admin queue.');
+      updateAdminKpiCounters();
       renderAdminQueue();
+      renderRejectedGallery();
+      showToast(`Deleted "${titleText}".`);
+    } catch {
+      cachedAdminSubmissions = cachedAdminSubmissions.filter((x) => String(x.id) !== String(subId));
+      updateAdminKpiCounters();
+      renderAdminQueue();
+      renderRejectedGallery();
+      showToast(`Deleted "${titleText}".`);
     }
     return;
   }
@@ -1413,13 +1534,18 @@ async function handleAdminReviewClick(e) {
   btn.disabled = true;
   const msg = card.querySelector('.admin-message');
   try {
+    const nextStatus = btn.dataset.review;
+    const feedbackInput = card.querySelector('.admin-feedback');
+    const updatePayload = {
+      status: nextStatus,
+      updated_at: new Date().toISOString(),
+    };
+    if (feedbackInput) {
+      updatePayload.admin_feedback = feedbackInput.value.trim();
+    }
     const { data, error } = await supabase
       .from('project_submissions')
-      .update({
-        status: btn.dataset.review,
-        admin_feedback: card.querySelector('.admin-feedback')?.value.trim() || '',
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', card.dataset.submissionId)
       .select('id,status')
       .single();
@@ -1427,9 +1553,11 @@ async function handleAdminReviewClick(e) {
     if (!data) throw new Error('No submission was updated. Refresh and try again.');
     if (msg) msg.textContent = 'Submission status updated.';
     showToast(
-      btn.dataset.review === 'rejected'
-        ? 'Project rejected and moved out of Pending queue.'
-        : `Project marked as ${btn.dataset.review}.`
+      nextStatus === 'rejected'
+        ? 'Video moved to Rejected Videos Gallery.'
+        : nextStatus === 'pending'
+        ? 'Restored to Pending Moderation Queue.'
+        : 'Approved for public exhibition!'
     );
     await loadAdminDashboard();
   } catch (err) {
@@ -1444,6 +1572,7 @@ async function handleAdminReviewClick(e) {
 
 document.getElementById('adminSubmissionList')?.addEventListener('click', handleAdminReviewClick);
 document.getElementById('adminApprovedGallery')?.addEventListener('click', handleAdminReviewClick);
+document.getElementById('adminRejectedGallery')?.addEventListener('click', handleAdminReviewClick);
 
 async function setResultsPublished(published) {
   const btn = document.getElementById(published ? 'publishResultsNow' : 'unpublishResultsNow');

@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#f8f9fb" />
-  <meta name="description" content="AI Project Arena — Official university student innovation & research showcase." />
+  <meta name="theme-color" content="#0b0f17" />
+  <meta name="description" content="AI Project Arena — Official university student innovation, video demonstration & peer evaluation platform." />
   <title>AI Project Arena — University Innovation Showcase</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="login.css" />
 </head>
-<body>
+<body class="dark-mode">
   <header class="topbar">
     <div class="wrap nav">
       <a class="brand" href="index.html">
@@ -26,7 +26,9 @@
         <a href="#process">How It Works</a>
       </nav>
       <div class="navactions">
-        <button class="btn" id="themeToggle" type="button" aria-label="Toggle dark mode">☾ Dark mode</button>
+        <button class="btn" id="themeToggle" type="button" aria-label="Toggle theme" aria-pressed="true">
+          <span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Light mode</span>
+        </button>
         <button class="btn" id="headerSignIn" type="button" data-auth="signin">Sign in</button>
         <button class="btn primary" id="headerChooseRole" type="button">Join Arena</button>
       </div>
@@ -40,7 +42,7 @@
         <div class="eyebrow">University Innovation &amp; Research Showcase</div>
         <h1>Engineering ideas,<br><span>tested in the arena.</span></h1>
         <p class="lead">
-          The official academic platform to register student teams, document engineering demos, undergo faculty review, and participate in verified one-student-one-vote peer evaluation.
+          The official academic platform to register student teams, showcase engineering video demonstrations, pass faculty quality review, and take part in verified one-student-one-vote peer evaluation.
         </p>
         <div class="heroactions">
           <button class="btn primary" id="chooseRoleBtn" type="button">Enter the Arena ↗</button>
@@ -50,15 +52,15 @@
         <div class="meta">
           <div>
             <strong>Verified Identity</strong>
-            University &amp; OAuth Accounts
+            University &amp; Google Accounts
           </div>
           <div>
-            <strong>Peer &amp; Faculty Review</strong>
-            Moderated project gallery
+            <strong>Faculty Moderation</strong>
+            Reviewed video demonstrations
           </div>
           <div>
-            <strong>Cryptographic Fairness</strong>
-            One verified vote per student
+            <strong>One Student, One Vote</strong>
+            Tamper-proof peer evaluation
           </div>
         </div>
       </div>
@@ -74,7 +76,7 @@
             <span class="status">Approved Entry</span>
           </div>
           <h3>Smart Campus Assistant &amp; Navigation</h3>
-          <p>An LLM-assisted campus directory and lab scheduling system built for DUET students and faculty members.</p>
+          <p>An AI-powered campus directory and laboratory scheduling assistant built for DUET students and faculty members.</p>
           <div class="bars" aria-hidden="true">
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
           </div>
@@ -95,10 +97,10 @@
           <button class="role-card" type="button" data-auth="signin" data-role="voter">
             <div class="role-card-top">
               <span class="role-icon">✓</span>
-              <span class="role-tag">Student &amp; Guest Track</span>
+              <span class="role-tag">Student &amp; Evaluator Track</span>
             </div>
             <strong>I’m a Voter / Evaluator</strong>
-            <span>Browse faculty-approved student demonstrations, filter by team or topic, and cast your single official vote while the voting window is active.</span>
+            <span>Watch faculty-approved student project demonstrations, search by team or roll number, and cast your single official vote while voting is open.</span>
             <span class="role-cta">Continue as Voter →</span>
           </button>
 
@@ -108,7 +110,7 @@
               <span class="role-tag">Project Lead Track</span>
             </div>
             <strong>I’m an Uploader / Team Lead</strong>
-            <span>Register your project group, manage student roll numbers, submit your YouTube demonstration for faculty review, and track live vote counts.</span>
+            <span>Register your project group, add team member roll numbers, submit your YouTube demonstration for faculty review, and track live vote totals.</span>
             <span class="role-cta">Continue as Team Lead →</span>
           </button>
         </div>
@@ -124,7 +126,7 @@
           <div>
             <div class="eyebrow">Team Lead Workspace</div>
             <h2 id="dashWelcome">Your Project Workspace</h2>
-            <p>Register your team roster, submit your video demonstration, and monitor faculty review status.</p>
+            <p>Register your team roster, submit your YouTube video demonstration, and monitor faculty review status.</p>
           </div>
           <div class="dash-head-actions">
             <a class="btn" href="guidelines.html">Submission Checklist</a>
@@ -235,7 +237,7 @@
           <div>
             <div class="eyebrow">Faculty &amp; Committee Control Room</div>
             <h2>Competition Administration</h2>
-            <p>Moderate student submissions, configure competition windows, manage administrators, and publish official standings.</p>
+            <p>Moderate student submissions, manage the Rejected Videos Gallery, configure deadlines, and publish official standings.</p>
           </div>
           <div class="dash-head-actions">
             <button class="btn" id="exportAdminCsv" type="button">⬇ Export CSV Report</button>
@@ -250,7 +252,7 @@
             <strong id="adminTotal">—</strong>
           </div>
           <div class="admin-stat">
-            <span>Awaiting Review</span>
+            <span>Pending Review</span>
             <strong id="adminPending">—</strong>
           </div>
           <div class="admin-stat">
@@ -258,7 +260,7 @@
             <strong id="adminApproved">—</strong>
           </div>
           <div class="admin-stat">
-            <span>Rejected / Needs Fix</span>
+            <span>Rejected Gallery</span>
             <strong id="adminRejected">—</strong>
           </div>
         </div>
@@ -266,10 +268,11 @@
         <!-- Admin Section Filter Tabs -->
         <div class="admin-tabs" role="tablist" aria-label="Admin sections">
           <button class="admin-tab active" type="button" data-admin-section="all">All Panels</button>
-          <button class="admin-tab" type="button" data-admin-section="queue">Review Queue</button>
+          <button class="admin-tab" type="button" data-admin-section="queue">Pending Queue</button>
+          <button class="admin-tab" type="button" data-admin-section="gallery">Approved Gallery</button>
+          <button class="admin-tab" type="button" data-admin-section="rejected" id="rejectedGalleryTabBtn">Rejected Videos Gallery</button>
           <button class="admin-tab" type="button" data-admin-section="settings">Schedule &amp; Windows</button>
           <button class="admin-tab" type="button" data-admin-section="results">Live Leaderboard</button>
-          <button class="admin-tab" type="button" data-admin-section="gallery">Approved Gallery</button>
         </div>
 
         <!-- Super Admin Access Management -->
@@ -351,25 +354,24 @@
           <div class="admin-message" id="adminSettingsMessage" role="status"></div>
         </section>
 
-        <!-- Submission Review Queue -->
+        <!-- Submission Review Queue (Pending & Drafts only — Rejected videos stay in the Rejected Videos Gallery below) -->
         <section class="admin-panel" data-panel-group="queue">
           <div class="admin-panel-head">
             <div>
-              <h3>Submission Moderation Queue</h3>
-              <p class="dash-help" style="margin:4px 0 0">Pending submissions are shown by default. Use the filter to view or delete rejected entries.</p>
+              <h3>Pending Moderation Queue</h3>
+              <p class="dash-help" style="margin:4px 0 0">Review new student submissions. Rejecting a video moves it directly to the Rejected Videos Gallery.</p>
             </div>
           </div>
           <div class="admin-filter-bar">
-            <input type="search" id="adminQueueSearch" placeholder="Filter queue by project title, team name, or roll number…" aria-label="Search review queue" />
-            <select id="adminQueueStatusFilter" aria-label="Filter by status">
+            <input type="search" id="adminQueueSearch" placeholder="Search pending queue by project title, team name, or roll number…" aria-label="Search review queue" />
+            <select id="adminQueueStatusFilter" aria-label="Filter queue status">
               <option value="pending" selected>Pending review only</option>
-              <option value="all">All non-approved (Pending + Rejected + Draft)</option>
-              <option value="rejected">Rejected only</option>
-              <option value="draft">Drafts only</option>
+              <option value="draft">Saved drafts only</option>
+              <option value="all">All active (Pending + Drafts)</option>
             </select>
           </div>
           <div class="admin-list" id="adminSubmissionList">
-            <div class="dashboard-empty">Loading submissions…</div>
+            <div class="dashboard-empty">Loading pending submissions…</div>
           </div>
         </section>
 
@@ -377,12 +379,29 @@
         <section class="admin-panel" data-panel-group="gallery">
           <div class="admin-panel-head">
             <div>
-              <h3>Approved Exhibition Roster</h3>
-              <p class="dash-help" style="margin:4px 0 0">Compact list of projects currently live in the voter gallery.</p>
+              <h3>Approved Exhibition Gallery</h3>
+              <p class="dash-help" style="margin:4px 0 0">Projects currently approved and live in the student voting showcase.</p>
             </div>
           </div>
           <div class="approved-gallery-list" id="adminApprovedGallery">
             <div class="dashboard-empty">Loading approved projects…</div>
+          </div>
+        </section>
+
+        <!-- DEDICATED REJECTED VIDEOS GALLERY (HOLDING & PERMANENT DELETE) -->
+        <section class="admin-panel rejected-gallery-panel" id="adminRejectedGallerySection" data-panel-group="rejected">
+          <div class="admin-panel-head">
+            <div>
+              <div class="eyebrow" style="color:var(--danger)">Quarantined Submissions Vault</div>
+              <h3>Rejected Videos Gallery</h3>
+              <p class="dash-help" style="margin:4px 0 0">All rejected videos stay in this gallery so they never clutter your active review queue. You can permanently delete individual rejected videos, clear all rejected videos, or restore an entry back to Pending.</p>
+            </div>
+            <div class="admin-actions">
+              <button class="btn danger" id="deleteAllRejectedBtn" type="button">🗑 Delete All Rejected Videos</button>
+            </div>
+          </div>
+          <div class="rejected-gallery-grid" id="adminRejectedGallery">
+            <div class="dashboard-empty">No rejected videos in the gallery.</div>
           </div>
         </section>
 
@@ -418,7 +437,7 @@
           <article class="step">
             <div class="stepnum">PHASE 02 · MODERATION</div>
             <h3>Faculty Quality Review</h3>
-            <p>Instructors inspect submissions for completeness and video clarity, either approving entries for exhibition or returning actionable feedback.</p>
+            <p>Instructors inspect submissions for completeness and video clarity, approving entries for exhibition or moving rejected demos to the Rejected Gallery.</p>
           </article>
           <article class="step">
             <div class="stepnum">PHASE 03 · EVALUATION</div>

@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#f8f7f3" />
+  <meta name="theme-color" content="#0b0f17" />
   <meta name="description" content="Official rules, evaluation rubric, and submission guidelines for the AI Project Arena." />
   <title>Rules &amp; Rubric — AI Project Arena</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="login.css" />
 </head>
-<body>
+<body class="dark-mode">
   <header class="topbar">
     <div class="wrap nav">
       <a class="brand" href="index.html">
@@ -26,7 +26,9 @@
         <a href="index.html#process">How It Works</a>
       </nav>
       <div class="navactions">
-        <button class="btn" id="themeToggle" type="button" aria-label="Toggle dark mode">☾ Dark mode</button>
+        <button class="btn" id="themeToggle" type="button" aria-label="Toggle theme" aria-pressed="true">
+          <span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Light mode</span>
+        </button>
         <a class="btn primary" href="index.html#roleChooser">Enter Arena ↗</a>
       </div>
     </div>
