@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f8f7f3" />
+  <meta name="description" content="AI Project Arena — Official project showcase and competition standings." />
+  <title>Showcase &amp; Standings — AI Project Arena</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap nav">
+      <a class="brand" href="index.html">
+        <span class="mark">A</span>
+        <span class="brand-meta">
+          <span>AI Project Arena</span>
+          <span class="brand-sub">DUET · Academic Showcase</span>
+        </span>
+      </a>
+      <nav class="navlinks" aria-label="Primary">
+        <a href="index.html">Overview</a>
+        <a href="projects.html" aria-current="page">Showcase &amp; Results</a>
+        <a href="guidelines.html">Rules &amp; Rubric</a>
+        <a href="index.html#process">How It Works</a>
+      </nav>
+      <div class="navactions">
+        <button class="btn" id="themeToggle" type="button" aria-label="Toggle dark mode">☾ Dark mode</button>
+        <a class="btn primary" href="index.html#roleChooser">Open Workspace ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap">
+        <div class="eyebrow">University Exhibition Archive</div>
+        <h1>Student Project Showcase<br><span style="font-style:italic;color:var(--primary)">&amp; Official Standings.</span></h1>
+        <p>Browse approved student engineering demonstrations, team rosters, and published competition results.</p>
+      </div>
+    </section>
+
+    <section class="wrap" style="padding:36px 0 72px">
+      <div class="deadline-note" id="showcaseStatusBanner">
+        <span>Sign in from the <a href="index.html" style="color:var(--primary);font-weight:700;text-decoration:underline">Arena Overview</a> page to load live authenticated project galleries and cast your official vote.</span>
+        <a class="btn sm primary" href="index.html">Go to Sign-In &amp; Voting →</a>
+      </div>
+
+      <!-- Published Leaderboard Container -->
+      <section class="admin-panel" id="publicResultsSection" hidden style="margin:24px 0">
+        <div class="admin-panel-head">
+          <div>
+            <div class="eyebrow">Official Results Announced</div>
+            <h3 style="margin-top:4px;font-size:22px">Final Competition Leaderboard</h3>
+          </div>
+        </div>
+        <div id="publicLeaderboardList" class="admin-results"></div>
+      </section>
+
+      <!-- Search Toolbar -->
+      <div class="voter-toolbar">
+        <div class="search-input-wrap">
+          <input type="search" id="publicSearchInput" placeholder="Filter projects by title, team name, member, or roll number…" aria-label="Filter projects" />
+        </div>
+        <div class="voter-toolbar-meta">
+          <span id="publicProjectCount">Loading archive…</span>
+        </div>
+      </div>
+
+      <div class="voter-grid" id="publicProjectGrid">
+        <div class="dashboard-empty">Connecting to Arena archive…</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footerinner">
+      <span>© 2026 AI Project Arena · Dawood University of Engineering &amp; Technology (DUET)</span>
+      <div class="footerlinks">
+        <a href="index.html">Overview</a>
+        <a href="projects.html">Showcase</a>
+        <a href="guidelines.html">Rules &amp; Rubric</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="theme.js"></script>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const grid = document.getElementById('publicProjectGrid');
+    const countEl = document.getElementById('publicProjectCount');
+    const searchInput = document.getElementById('publicSearchInput');
+    const banner = document.getElementById('showcaseStatusBanner');
+    const resultsSection = document.getElementById('publicResultsSection');
+    const leaderboardList = document.getElementById('publicLeaderboardList');
+
+    let allProjects = [];
+    let membersMap = new Map();
+
+    function escapeHtml(val) {
+      return String(val ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+    }
+
+    function getYoutubeEmbedUrl(raw) {
+      try {
+        const u = new URL(raw);
+        const host = u.hostname.toLowerCase().replace(/^www\./, '');
+        if (!['youtube.com', 'm.youtube.com', 'youtu.be'].includes(host)) return null;
+        let id = '';
+        if (host === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] || '';
+        else if (u.pathname === '/watch') id = u.searchParams.get('v') || '';
+        else {
+          const parts = u.pathname.split('/').filter(Boolean);
+          if (['embed', 'shorts', 'live', 'v'].includes(parts[0])) id = parts[1] || '';
+        }
+        return /^[A-Za-z0-9_-]{11}$/.test(id) ? 'https://www.youtube-nocookie.com/embed/' + id : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function renderGrid() {
+      const q = (searchInput?.value || '').trim().toLowerCase();
+      const filtered = allProjects.filter((p) => {
+        if (!q) return true;
+        const mems = (membersMap.get(p.group_id) || []).map((m) => `${m.member_name} ${m.roll_number}`).join(' ');
+        return `${p.project_title || ''} ${p.team_name || ''} ${p.project_description || ''} ${mems}`.toLowerCase().includes(q);
+      });
+      countEl.textContent = `${filtered.length} project${filtered.length === 1 ? '' : 's'} shown`;
+      if (!filtered.length) {
+        grid.innerHTML = '<div class="dashboard-empty">No approved projects match your filter.</div>';
+        return;
+      }
+      grid.innerHTML = filtered.map((x) => {
+        const embed = getYoutubeEmbedUrl(x.video_url || '');
+        const mems = membersMap.get(x.group_id) || [];
+        return `
+          <article class="voter-card">
+            <div class="eyebrow">${escapeHtml(x.team_name || 'Student Team')}</div>
+            <h3>${escapeHtml(x.project_title)}</h3>
+            <p>${escapeHtml(x.project_description)}</p>
+            <div class="admin-member-list">
+              <strong>Team Roster</strong>
+              ${mems.map((m) => `<div>${escapeHtml(m.member_name)} · <span style="font-family:var(--mono)">${escapeHtml(m.roll_number)}</span></div>`).join('') || '<span>Verified university group</span>'}
+            </div>
+            ${embed ? `<iframe src="${escapeHtml(embed)}" title="${escapeHtml(x.project_title)}" loading="lazy" allowfullscreen></iframe>` : ''}
+            <div class="voter-card-footer">
+              <span class="dash-status approved">Approved Entry</span>
+              <a class="btn sm primary" href="index.html">Vote in Workspace →</a>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    searchInput?.addEventListener('input', renderGrid);
+
+    async function initShowcase() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+
+      if (session) {
+        banner.innerHTML = `<span>Signed in as <strong>${escapeHtml(session.user.email)}</strong> · Live gallery synced.</span><a class="btn sm primary" href="index.html">Open Your Workspace →</a>`;
+      }
+
+      const [settingsRes, projectsRes, membersRes, resultsRes] = await Promise.all([
+        supabase.from('competition_settings').select('*').eq('id', true).maybeSingle(),
+        supabase.rpc('get_approved_arena_projects'),
+        supabase.from('group_members').select('group_id,member_name,roll_number').order('created_at'),
+        supabase.rpc('get_arena_results')
+      ]);
+
+      (membersRes.data || []).forEach((m) => {
+        if (!membersMap.has(m.group_id)) membersMap.set(m.group_id, []);
+        membersMap.get(m.group_id).push(m);
+      });
+
+      if (settingsRes.data?.results_published && resultsRes.data?.length) {
+        resultsSection.hidden = false;
+        const maxVotes = Math.max(1, ...resultsRes.data.map((r) => Number(r.vote_count || 0)));
+        leaderboardList.innerHTML = resultsRes.data.map((r, i) => {
+          const count = Number(r.vote_count || 0);
+          const pct = Math.round((count / maxVotes) * 100);
+          const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+          return `
+            <div class="admin-result">
+              <span class="rank-badge ${rankClass}">#${i + 1}</span>
+              <div>
+                <div><strong>${escapeHtml(r.project_title)}</strong> · <span style="color:var(--muted)">${escapeHtml(r.group_name)}</span></div>
+                <div class="result-bar-wrap"><div class="result-bar-fill" style="width:${pct}%"></div></div>
+              </div>
+              <strong style="font-family:var(--mono);font-size:15px">${count} vote${count === 1 ? '' : 's'}</strong>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (projectsRes.error) {
+        countEl.textContent = 'Sign in required for full live archive';
+        grid.innerHTML = `
+          <article class="voter-card">
+            <div class="eyebrow">Featured Reference · CS Team 04</div>
+            <h3>Smart Campus Assistant &amp; Navigation</h3>
+            <p>An LLM-assisted campus directory and laboratory scheduling assistant built for DUET students and faculty members. Sign in on the main Arena page to view all live student submissions and cast your vote.</p>
+            <div class="voter-card-footer">
+              <span class="dash-status approved">Sample Showcase</span>
+              <a class="btn sm primary" href="index.html">Sign in to view all →</a>
+            </div>
+          </article>
+        `;
+        return;
+      }
+
+      allProjects = projectsRes.data || [];
+      renderGrid();
+    }
+
+    initShowcase();
+  </script>
+</body>
+</html>

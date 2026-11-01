@@ -1,52 +1,542 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f7f7f4"><meta name="description" content="AI Project Arena — a university student project showcase.">
-<title>AI Project Arena — Ideas in action</title>
-<link rel="stylesheet" href="styles.css">  <link rel="stylesheet" href="login.css" />
-</head><body>
-<header class="topbar"><div class="wrap nav"><a class="brand" href="#"><span class="mark">A</span><span>AI Project Arena</span></a><nav class="navlinks"><a href="#about">About</a><a href="#process">How it works</a><a href="#projects">Projects</a></nav><div class="navactions"><button class="btn" id="themeToggle" type="button" aria-label="Toggle dark mode">☾ Dark mode</button><button class="btn primary" id="headerChooseRole" type="button">Choose role</button></div></div></header>
-<main><section class="wrap hero" id="about"><div><div class="eyebrow">University innovation showcase</div><h1>Big ideas.<br><span>Built by students.</span></h1><p class="lead">A place to present your team’s work, explore what other students are building, and help outstanding projects get the recognition they deserve.</p><div class="heroactions"><button class="btn primary" id="chooseRoleBtn" type="button">Choose your role ↗</button><button class="btn" data-toast="Browse the steps below to see how the arena works.">How it works</button></div><div class="meta"><div><strong>One community</strong>Students & mentors</div><div><strong>Real projects</strong>Ideas made tangible</div><div><strong>Fair voting</strong>One vote per student</div></div></div><div class="showcase" id="projects"><div class="showcase-label">Featured project · Preview</div><article class="project-card"><div class="project-top"><span>COMPUTER SCIENCE · TEAM 04</span><span class="status">Approved</span></div><h3>Smart Campus Assistant</h3><p>A student-built concept for making campus information easier to access.</p><div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="project-foot"><span>Project showcase</span><span>Video · Team details</span></div></article></div></section>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f8f7f3" />
+  <meta name="description" content="AI Project Arena — Official university student innovation & research showcase." />
+  <title>AI Project Arena — University Innovation Showcase</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap nav">
+      <a class="brand" href="index.html">
+        <span class="mark">A</span>
+        <span class="brand-meta">
+          <span>AI Project Arena</span>
+          <span class="brand-sub">DUET · Academic Showcase</span>
+        </span>
+      </a>
+      <nav class="navlinks" aria-label="Primary">
+        <a href="index.html" aria-current="page">Overview</a>
+        <a href="projects.html">Showcase &amp; Results</a>
+        <a href="guidelines.html">Rules &amp; Rubric</a>
+        <a href="#process">How It Works</a>
+      </nav>
+      <div class="navactions">
+        <button class="btn" id="themeToggle" type="button" aria-label="Toggle dark mode">☾ Dark mode</button>
+        <button class="btn" id="headerSignIn" type="button" data-auth="signin">Sign in</button>
+        <button class="btn primary" id="headerChooseRole" type="button">Join Arena</button>
+      </div>
+    </div>
+  </header>
 
-<section class="role-chooser" id="roleChooser"><div class="wrap"><div class="eyebrow">Choose your path</div><h2>How would you like to join?</h2><div class="role-grid"><button class="role-card" type="button" data-auth="signup" data-role="voter"><span class="role-icon">✓</span><strong>I’m a Voter</strong><span>Explore approved projects and cast your vote for the team you believe in.</span></button><button class="role-card" type="button" data-auth="signup" data-role="team"><span class="role-icon">✦</span><strong>I’m an Uploader / Team</strong><span>Register your team, add members, submit your project video and track votes.</span></button></div></div></section>
+  <main>
+    <!-- HERO SECTION -->
+    <section class="wrap hero" id="about">
+      <div>
+        <div class="eyebrow">University Innovation &amp; Research Showcase</div>
+        <h1>Engineering ideas,<br><span>tested in the arena.</span></h1>
+        <p class="lead">
+          The official academic platform to register student teams, document engineering demos, undergo faculty review, and participate in verified one-student-one-vote peer evaluation.
+        </p>
+        <div class="heroactions">
+          <button class="btn primary" id="chooseRoleBtn" type="button">Enter the Arena ↗</button>
+          <a class="btn" href="projects.html">Explore Showcase</a>
+          <a class="btn" href="guidelines.html">Read Guidelines</a>
+        </div>
+        <div class="meta">
+          <div>
+            <strong>Verified Identity</strong>
+            Email OTP, Password &amp; OAuth
+          </div>
+          <div>
+            <strong>Peer &amp; Faculty Review</strong>
+            Moderated project gallery
+          </div>
+          <div>
+            <strong>Cryptographic Fairness</strong>
+            One verified vote per student
+          </div>
+        </div>
+      </div>
 
-<section class="dashboard" id="studentDashboard">
- <div class="wrap">
-  <div class="dash-head"><div><div class="eyebrow">Student workspace</div><h2 id="dashWelcome">Your project dashboard</h2><p>Register your team, manage its roster and submit your project.</p></div><button class="btn" id="refreshDashboard" type="button">Refresh</button></div>
-  <div class="deadline-note" id="competitionNotice">Loading competition settings…</div>
-  <section class="vote-stats" id="teamVoteStats"><h3>Your vote dashboard</h3><div class="dashboard-empty">Loading vote totals…</div></section>
-  <div class="dash-grid">
-   <section class="dash-panel">
-    <h3>Register a team</h3><p class="dash-help">Add yourself as the team lead, then list your teammates and their roll numbers.</p>
-    <form id="createGroupForm">
-     <label class="dash-field">Team name<input name="groupName" maxlength="80" required placeholder="e.g. Team Innovators"></label>
-     <div style="font-size:13px;font-weight:700;margin:16px 0 6px">Team members</div>
-     <div id="memberRows">
-      <div class="member-row"><input name="memberName" required maxlength="100" placeholder="Your full name"><input name="rollNumber" required maxlength="40" placeholder="Your roll number"><button class="member-remove" type="button" aria-label="Remove member" hidden>Remove</button></div>
-     </div>
-     <button class="text-button" id="addMember" type="button">+ Add another member</button>
-     <button class="btn primary" type="submit" style="width:100%;margin-top:12px">Create team</button>
-     <div class="dash-message" id="groupMessage" role="status"></div>
-    </form>
-   </section>
-   <section><div class="group-list" id="groupList"><div class="dashboard-empty">Sign in to load your teams.</div></div></section>
-  </div>
- </div>
-</section>
+      <div class="showcase" id="projects">
+        <div class="showcase-header">
+          <span class="showcase-label">Live Exhibition Preview</span>
+          <span class="showcase-badge" id="heroCompetitionBadge">Academic Session 2026</span>
+        </div>
+        <article class="project-card">
+          <div class="project-top">
+            <span>COMPUTER SCIENCE · TEAM 04</span>
+            <span class="status">Approved Entry</span>
+          </div>
+          <h3>Smart Campus Assistant &amp; Navigation</h3>
+          <p>An LLM-assisted campus directory and lab scheduling system built for DUET students and faculty members.</p>
+          <div class="bars" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="project-foot">
+            <span>Video Demo · Roster Verified</span>
+            <a href="projects.html" style="color:var(--primary);font-weight:700">Open Archive →</a>
+          </div>
+        </article>
+      </div>
+    </section>
 
-<section class="voter-dashboard" id="voterDashboard"><div class="wrap"><div class="dash-head"><div><div class="eyebrow">Voter space</div><h2 id="voterWelcome">Explore projects</h2><p>Watch approved project demos and cast one vote for your favourite team.</p></div><button class="btn" id="refreshVoter" type="button">Refresh projects</button></div><div class="deadline-note" id="votingNotice">Loading voting status…</div><div class="voter-message" id="voterMessage" role="status"></div><div class="voter-grid" id="voterProjectList"><div class="dashboard-empty">Loading approved projects…</div></div></div></section>
+    <!-- ROLE CHOOSER -->
+    <section class="role-chooser" id="roleChooser">
+      <div class="wrap">
+        <div class="eyebrow">Select Your Participation Track</div>
+        <h2>How are you participating today?</h2>
+        <div class="role-grid">
+          <button class="role-card" type="button" data-auth="signin" data-role="voter">
+            <div class="role-card-top">
+              <span class="role-icon">✓</span>
+              <span class="role-tag">Student &amp; Guest Track</span>
+            </div>
+            <strong>I’m a Voter / Evaluator</strong>
+            <span>Browse faculty-approved student demonstrations, filter by team or topic, and cast your single official vote while the voting window is active.</span>
+            <span class="role-cta">Continue as Voter →</span>
+          </button>
 
-<section class="admin-dashboard" id="adminDashboard"><div class="wrap"><div class="dash-head"><div><div class="eyebrow">Administration</div><h2>Competition control room</h2><p>Review submissions, manage competition windows and publish official results.</p></div><button class="btn" id="refreshAdmin" type="button">Refresh data</button></div><div class="admin-grid"><div class="admin-stat"><span>Total submissions</span><strong id="adminTotal">—</strong></div><div class="admin-stat"><span>Awaiting review</span><strong id="adminPending">—</strong></div><div class="admin-stat"><span>Approved projects</span><strong id="adminApproved">—</strong></div></div><section class="admin-panel admin-management" id="superAdminPanel" hidden>
-<h3>Super admin · access management</h3>
-<p class="dash-help">Grant or revoke admin access by email. The person must sign in using that same email address.</p>
-<form id="adminAccessForm" class="admin-access-form">
-<label class="dash-field">Email address<input id="adminAccessEmail" type="email" required maxlength="254" placeholder="person@example.com"></label>
-<button class="btn primary" type="submit">Grant admin access</button>
-</form>
-<div class="admin-message" id="adminAccessMessage" role="status"></div>
-<div id="adminAccessList" class="admin-access-list" aria-live="polite"></div>
-</section><section class="admin-panel"><h3>Competition settings</h3><div class="admin-settings"><label>Competition title<input id="adminTitle" maxlength="160"></label><label>Submission deadline<input id="adminSubmissionDeadline" type="datetime-local"></label><label>Voting deadline<input id="adminVotingDeadline" type="datetime-local"></label></div><label class="admin-toggle"><input id="adminSubmissionsOpen" type="checkbox"> Submissions are open</label><label class="admin-toggle"><input id="adminVotingOpen" type="checkbox"> Voting is open</label><div class="admin-voting-controls"><div><strong id="adminVotingCountdown">Voting is not running</strong><p class="dash-help" id="adminVotingState">Set a voting deadline, then start voting.</p></div><div class="admin-actions"><button class="btn primary" id="startVotingNow" type="button">Start voting</button><button class="btn danger" id="stopVotingNow" type="button">Stop voting</button></div></div><label class="admin-toggle"><input id="adminResultsPublished" type="checkbox" disabled> Final results are published</label><div class="admin-actions"><button class="btn primary" id="publishResultsNow" type="button">Publish results</button><button class="btn danger" id="unpublishResultsNow" type="button">Hide results</button></div><button class="btn primary" id="saveAdminSettings" type="button">Save title & submission settings</button><div class="admin-message" id="adminSettingsMessage" role="status"></div></section><section class="admin-panel"><h3>Project submissions</h3><p class="dash-help">Approve projects for the public gallery, or reject them with feedback for the team.</p><div class="admin-list" id="adminSubmissionList"><div class="dashboard-empty">Loading submissions…</div></div></section><section class="admin-panel"><h3>Approved gallery</h3><p class="dash-help">Approved projects are kept in a compact list here instead of taking space in the review queue.</p><div class="approved-gallery-list" id="adminApprovedGallery"><div class="dashboard-empty">Loading approved projects…</div></div></section><section class="admin-panel"><h3>Vote totals · counts only</h3><p class="dash-help">Live aggregate numbers are shown to administrators. Individual voter names, accounts and vote choices are never displayed. Students see final results only after publication.</p><div id="adminResults" class="admin-results">Vote totals are loading…</div></section></div></section><section class="section" id="process"><div class="wrap"><div class="sectionhead"><div><div class="eyebrow">Simple by design</div><h2>From first idea<br>to final showcase.</h2></div><p>Everything your university project competition needs, organised in one clear and easy-to-use space.</p></div><div class="steps"><article class="step"><div class="stepnum">01 / SUBMIT</div><h3>Build your team’s page</h3><p>Register your group, add your project details and members, then share a demo video.</p></article><article class="step"><div class="stepnum">02 / DISCOVER</div><h3>Explore student projects</h3><p>Browse approved entries, learn what other teams created and watch their demonstrations.</p></article><article class="step"><div class="stepnum">03 / VOTE</div><h3>Recognise great work</h3><p>Cast your vote during the official voting period. Results stay private until they are announced.</p></article></div></div></section>
-<section class="wrap home-cta" id="joinCta"><div class="cta"><div><h2>Your idea belongs here.</h2><p>Bring your team, share what you’ve made, and take part in the arena.</p></div><button class="btn" id="ctaChooseRole" type="button">Join the arena ↗</button></div></section></main>
-<footer><div class="wrap footerinner"><span>© 2026 AI Project Arena · University project showcase</span><div class="footerlinks"><a href="#about">About</a><a href="#process">Guidelines</a><a href="#" id="adminEntry">Admin</a></div></div></footer><section class="auth-modal" id="authModal" aria-hidden="true"><div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" id="authClose" type="button" aria-label="Close">×</button><h2 id="authTitle">Welcome to the arena</h2><p id="authSubtitle">Sign in to explore student projects and take part.</p><div class="auth-tabs" role="tablist"><button type="button" class="active" data-mode="signin">Sign in</button><button type="button" data-mode="signup">Create account</button></div><button id="googleSignIn" type="button">Continue with Google</button><form id="authForm"><label id="nameField" style="display:none">Full name<input id="fullName" type="text" autocomplete="name"></label><label id="typeField" style="display:none">Account type<select id="accountType"><option value="general">General account</option><option value="university">University student</option></select></label><label>Email address<input id="email" type="email" autocomplete="email" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required minlength="8"></label><button id="authSubmit" type="submit">Sign in</button></form><p id="authMessage" role="status" aria-live="polite"></p></div></section><div class="toast" role="status" aria-live="polite"></div><script type="module" src="theme.js"></script><script type="module" src="app.js"></script>  <script type="module" src="auth.js"></script>
-<script type="module" src="admin-access.js"></script>
-</body></html>
+          <button class="role-card" type="button" data-auth="signin" data-role="team">
+            <div class="role-card-top">
+              <span class="role-icon">✦</span>
+              <span class="role-tag">Project Lead Track</span>
+            </div>
+            <strong>I’m an Uploader / Team Lead</strong>
+            <span>Register your project group, manage student roll numbers, submit your YouTube demonstration for faculty review, and track live vote counts.</span>
+            <span class="role-cta">Continue as Team Lead →</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         STUDENT / TEAM LEAD WORKSPACE
+         ==================================================================== -->
+    <section class="dashboard" id="studentDashboard">
+      <div class="wrap">
+        <div class="dash-head">
+          <div>
+            <div class="eyebrow">Team Lead Workspace</div>
+            <h2 id="dashWelcome">Your Project Workspace</h2>
+            <p>Register your team roster, submit your video demonstration, and monitor faculty review status.</p>
+          </div>
+          <div class="dash-head-actions">
+            <a class="btn" href="guidelines.html">Submission Checklist</a>
+            <button class="btn" id="refreshDashboard" type="button">↻ Refresh Workspace</button>
+          </div>
+        </div>
+
+        <!-- 4-Step Progress Tracker -->
+        <div class="workflow-stepper" id="teamWorkflowStepper">
+          <div class="workflow-step done" data-step="1">
+            <span class="workflow-step-num">1</span>
+            <div><strong>Account Verified</strong><span>Team Lead signed in</span></div>
+          </div>
+          <div class="workflow-step active" data-step="2">
+            <span class="workflow-step-num">2</span>
+            <div><strong>Register Roster</strong><span>Add members &amp; roll nos.</span></div>
+          </div>
+          <div class="workflow-step" data-step="3">
+            <span class="workflow-step-num">3</span>
+            <div><strong>Submit Demo</strong><span>YouTube link &amp; abstract</span></div>
+          </div>
+          <div class="workflow-step" data-step="4">
+            <span class="workflow-step-num">4</span>
+            <div><strong>Faculty Approval</strong><span>Live in public gallery</span></div>
+          </div>
+        </div>
+
+        <div class="deadline-note" id="competitionNotice">Loading competition schedule…</div>
+
+        <section class="vote-stats" id="teamVoteStats">
+          <h3>Your Team’s Live Standing</h3>
+          <div class="dashboard-empty">Loading vote totals…</div>
+        </section>
+
+        <div class="dash-grid">
+          <section class="dash-panel">
+            <h3>Register a New Team</h3>
+            <p class="dash-help">Enter your official group name and add every member with their university roll number (e.g., 26F-CS-044).</p>
+            <form id="createGroupForm">
+              <label class="dash-field">
+                Team / Group Name
+                <input name="groupName" maxlength="80" required placeholder="e.g. Neural Dynamics Lab" />
+              </label>
+              <div style="font-size:12.5px;font-weight:700;margin:16px 0 6px;color:var(--ink-secondary)">Team Roster (Lead first)</div>
+              <div id="memberRows">
+                <div class="member-row">
+                  <input name="memberName" required maxlength="100" placeholder="Team lead full name" />
+                  <input name="rollNumber" required maxlength="40" placeholder="Roll no. (e.g. 26F-CS-044)" />
+                  <button class="member-remove" type="button" aria-label="Remove member" hidden>Remove</button>
+                </div>
+              </div>
+              <button class="text-button" id="addMember" type="button">+ Add another team member</button>
+              <button class="btn primary" type="submit" style="width:100%;margin-top:14px">Register Team Roster</button>
+              <div class="dash-message" id="groupMessage" role="status"></div>
+            </form>
+          </section>
+
+          <section>
+            <div class="group-list" id="groupList">
+              <div class="dashboard-empty">Sign in to load your registered teams.</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VOTER WORKSPACE
+         ==================================================================== -->
+    <section class="voter-dashboard" id="voterDashboard">
+      <div class="wrap">
+        <div class="dash-head">
+          <div>
+            <div class="eyebrow">Evaluator &amp; Voter Workspace</div>
+            <h2 id="voterWelcome">Approved Project Exhibition</h2>
+            <p>Review approved student demonstrations and cast your single verified vote before the deadline.</p>
+          </div>
+          <div class="dash-head-actions">
+            <button class="btn" id="refreshVoter" type="button">↻ Refresh Projects</button>
+          </div>
+        </div>
+
+        <div class="deadline-note" id="votingNotice">Loading voting window status…</div>
+        <div class="voter-message" id="voterMessage" role="status"></div>
+
+        <!-- Search & Filter Toolbar -->
+        <div class="voter-toolbar">
+          <div class="search-input-wrap">
+            <input type="search" id="voterSearchInput" placeholder="Search projects by title, team name, member, or roll number…" aria-label="Search approved projects" />
+          </div>
+          <div class="voter-toolbar-meta">
+            <span id="voterCountBadge">0 projects</span>
+          </div>
+        </div>
+
+        <div class="voter-grid" id="voterProjectList">
+          <div class="dashboard-empty">Loading approved projects…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         ADMINISTRATION CONTROL ROOM
+         ==================================================================== -->
+    <section class="admin-dashboard" id="adminDashboard">
+      <div class="wrap">
+        <div class="dash-head">
+          <div>
+            <div class="eyebrow">Faculty &amp; Committee Control Room</div>
+            <h2>Competition Administration</h2>
+            <p>Moderate student submissions, configure competition windows, manage administrators, and publish official standings.</p>
+          </div>
+          <div class="dash-head-actions">
+            <button class="btn" id="exportAdminCsv" type="button">⬇ Export CSV Report</button>
+            <button class="btn" id="refreshAdmin" type="button">↻ Refresh Data</button>
+          </div>
+        </div>
+
+        <!-- KPI Metrics Row -->
+        <div class="admin-grid">
+          <div class="admin-stat">
+            <span>Total Submissions</span>
+            <strong id="adminTotal">—</strong>
+          </div>
+          <div class="admin-stat">
+            <span>Awaiting Review</span>
+            <strong id="adminPending">—</strong>
+          </div>
+          <div class="admin-stat">
+            <span>Approved in Gallery</span>
+            <strong id="adminApproved">—</strong>
+          </div>
+          <div class="admin-stat">
+            <span>Rejected / Needs Fix</span>
+            <strong id="adminRejected">—</strong>
+          </div>
+        </div>
+
+        <!-- Admin Section Filter Tabs -->
+        <div class="admin-tabs" role="tablist" aria-label="Admin sections">
+          <button class="admin-tab active" type="button" data-admin-section="all">All Panels</button>
+          <button class="admin-tab" type="button" data-admin-section="queue">Review Queue</button>
+          <button class="admin-tab" type="button" data-admin-section="settings">Schedule &amp; Windows</button>
+          <button class="admin-tab" type="button" data-admin-section="results">Live Leaderboard</button>
+          <button class="admin-tab" type="button" data-admin-section="gallery">Approved Gallery</button>
+        </div>
+
+        <!-- Super Admin Access Management -->
+        <section class="admin-panel admin-management" id="superAdminPanel" hidden data-panel-group="settings">
+          <div class="admin-panel-head">
+            <div>
+              <h3>Super Admin · Committee Access Control</h3>
+              <p class="dash-help" style="margin:4px 0 0">Grant or revoke administrator privileges by email address.</p>
+            </div>
+          </div>
+          <form id="adminAccessForm" class="admin-access-form">
+            <label class="dash-field">
+              Administrator Email Address
+              <input id="adminAccessEmail" type="email" required maxlength="254" placeholder="faculty.member@duet.edu.pk" />
+            </label>
+            <button class="btn primary" type="submit">Grant Admin Access</button>
+          </form>
+          <div class="admin-message" id="adminAccessMessage" role="status"></div>
+          <div id="adminAccessList" class="admin-access-list" aria-live="polite"></div>
+        </section>
+
+        <!-- Competition Settings -->
+        <section class="admin-panel" data-panel-group="settings">
+          <div class="admin-panel-head">
+            <h3>Competition Windows &amp; Deadlines</h3>
+            <button class="btn primary" id="saveAdminSettings" type="button">Save Title &amp; Submission Window</button>
+          </div>
+          <div class="admin-settings">
+            <label>
+              Competition Title
+              <input id="adminTitle" maxlength="160" placeholder="e.g. DUET AI Project Arena — Fall 2026" />
+            </label>
+            <label>
+              Submission Deadline
+              <input id="adminSubmissionDeadline" type="datetime-local" />
+            </label>
+            <label>
+              Voting Deadline
+              <input id="adminVotingDeadline" type="datetime-local" />
+            </label>
+          </div>
+          <div>
+            <label class="admin-toggle">
+              <input id="adminSubmissionsOpen" type="checkbox" />
+              Project submissions are open
+            </label>
+            <label class="admin-toggle">
+              <input id="adminVotingOpen" type="checkbox" disabled />
+              Voting window is active
+            </label>
+            <label class="admin-toggle">
+              <input id="adminResultsPublished" type="checkbox" disabled />
+              Official results are published to students
+            </label>
+          </div>
+
+          <div class="admin-voting-controls">
+            <div>
+              <strong id="adminVotingCountdown">Voting is not running</strong>
+              <p class="dash-help" id="adminVotingState">Set a future voting deadline above, then start voting.</p>
+            </div>
+            <div class="admin-actions">
+              <button class="btn primary" id="startVotingNow" type="button">Start Voting Window</button>
+              <button class="btn danger" id="stopVotingNow" type="button">Stop Voting</button>
+            </div>
+          </div>
+
+          <div class="admin-voting-controls" style="margin-bottom:0">
+            <div>
+              <strong style="font-family:var(--sans);font-size:15px">Public Results Publication</strong>
+              <p class="dash-help">When published, final vote rankings are visible on the public Showcase &amp; Results page.</p>
+            </div>
+            <div class="admin-actions">
+              <button class="btn primary" id="publishResultsNow" type="button">Publish Official Results</button>
+              <button class="btn danger" id="unpublishResultsNow" type="button">Hide Results</button>
+            </div>
+          </div>
+
+          <div class="admin-message" id="adminSettingsMessage" role="status"></div>
+        </section>
+
+        <!-- Submission Review Queue -->
+        <section class="admin-panel" data-panel-group="queue">
+          <div class="admin-panel-head">
+            <div>
+              <h3>Submission Moderation Queue</h3>
+              <p class="dash-help" style="margin:4px 0 0">Verify video playback, check team roll numbers, and approve or return submissions with structured feedback.</p>
+            </div>
+          </div>
+          <div class="admin-filter-bar">
+            <input type="search" id="adminQueueSearch" placeholder="Filter queue by project title, team name, or roll number…" aria-label="Search review queue" />
+            <select id="adminQueueStatusFilter" aria-label="Filter by status">
+              <option value="all">All non-approved (Pending + Rejected + Draft)</option>
+              <option value="pending">Pending review only</option>
+              <option value="rejected">Rejected only</option>
+              <option value="draft">Drafts only</option>
+            </select>
+          </div>
+          <div class="admin-list" id="adminSubmissionList">
+            <div class="dashboard-empty">Loading submissions…</div>
+          </div>
+        </section>
+
+        <!-- Approved Gallery -->
+        <section class="admin-panel" data-panel-group="gallery">
+          <div class="admin-panel-head">
+            <div>
+              <h3>Approved Exhibition Roster</h3>
+              <p class="dash-help" style="margin:4px 0 0">Compact list of projects currently live in the voter gallery.</p>
+            </div>
+          </div>
+          <div class="approved-gallery-list" id="adminApprovedGallery">
+            <div class="dashboard-empty">Loading approved projects…</div>
+          </div>
+        </section>
+
+        <!-- Vote Totals Leaderboard -->
+        <section class="admin-panel" data-panel-group="results">
+          <div class="admin-panel-head">
+            <div>
+              <h3>Live Aggregate Standings (Counts Only)</h3>
+              <p class="dash-help" style="margin:4px 0 0">Individual voter identities are never exposed. Standings refresh automatically every 15 seconds.</p>
+            </div>
+          </div>
+          <div id="adminResults" class="admin-results">Vote totals are loading…</div>
+        </section>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS SECTION -->
+    <section class="section" id="process">
+      <div class="wrap">
+        <div class="sectionhead">
+          <div>
+            <div class="eyebrow">Structured Academic Workflow</div>
+            <h2>From lab prototype<br>to university recognition.</h2>
+          </div>
+          <p>Designed for clarity and fairness across student teams, faculty reviewers, and student voters.</p>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <div class="stepnum">PHASE 01 · REGISTRATION</div>
+            <h3>Assemble &amp; Document</h3>
+            <p>Team leads register their group roster with verified university roll numbers, write a clear technical abstract, and attach a YouTube demo.</p>
+          </article>
+          <article class="step">
+            <div class="stepnum">PHASE 02 · MODERATION</div>
+            <h3>Faculty Quality Review</h3>
+            <p>Instructors inspect submissions for completeness and video clarity, either approving entries for exhibition or returning actionable feedback.</p>
+          </article>
+          <article class="step">
+            <div class="stepnum">PHASE 03 · EVALUATION</div>
+            <h3>Verified Peer Voting</h3>
+            <p>During the official voting window, authenticated students review project demos and cast a single vote. Standings remain sealed until publication.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSING CTA -->
+    <section class="wrap home-cta" id="joinCta">
+      <div class="cta">
+        <div>
+          <h2>Ready to showcase your engineering work?</h2>
+          <p>Sign in with your university email, OTP code, or Google account to register your team or evaluate peers.</p>
+        </div>
+        <button class="btn" id="ctaChooseRole" type="button">Get Started ↗</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footerinner">
+      <span>© 2026 AI Project Arena · Dawood University of Engineering &amp; Technology (DUET)</span>
+      <div class="footerlinks">
+        <a href="index.html">Overview</a>
+        <a href="projects.html">Showcase</a>
+        <a href="guidelines.html">Rules &amp; Rubric</a>
+        <a href="#" id="adminEntry">Faculty Admin</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================================
+       ENHANCED AUTHENTICATION MODAL (PASSWORD + EMAIL OTP + RECOVERY)
+       ====================================================================== -->
+  <section class="auth-modal" id="authModal" aria-hidden="true">
+    <div class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="auth-close" id="authClose" type="button" aria-label="Close">×</button>
+      <div class="auth-eyebrow">Verified Arena Access</div>
+      <h2 id="authTitle">Welcome to the Arena</h2>
+      <p id="authSubtitle">Select your participation role and sign in to continue.</p>
+
+      <!-- In-Modal Role Switcher (prevents getting kicked out when role isn't chosen yet) -->
+      <div class="auth-role-picker" role="group" aria-label="Participation Role">
+        <button type="button" class="auth-role-btn active" data-pick-role="voter">✓ Voter / Evaluator</button>
+        <button type="button" class="auth-role-btn" data-pick-role="team">✦ Uploader / Team Lead</button>
+      </div>
+
+      <!-- Auth Mode Tabs -->
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="active" data-mode="signin">Password</button>
+        <button type="button" data-mode="otp">Email OTP</button>
+        <button type="button" data-mode="signup">Create Account</button>
+      </div>
+
+      <button id="googleSignIn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+        Continue with Google
+      </button>
+
+      <div class="auth-or" id="authDivider">or with email</div>
+
+      <form id="authForm">
+        <label id="nameField" style="display:none">
+          Full Name
+          <input id="fullName" type="text" autocomplete="name" placeholder="e.g. Jawad Nawaz" />
+        </label>
+
+        <label id="typeField" style="display:none">
+          Account Affiliation
+          <select id="accountType">
+            <option value="general">General / Guest Account</option>
+            <option value="university">DUET University Student (@students.duet.edu.pk)</option>
+          </select>
+        </label>
+
+        <label id="emailField">
+          Email Address
+          <input id="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+        </label>
+
+        <label id="passwordField">
+          <span id="passwordLabelText">Password</span>
+          <div class="password-field-wrap">
+            <input id="password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" />
+            <button type="button" class="password-toggle-btn" id="togglePasswordBtn" aria-label="Show password">Show</button>
+          </div>
+        </label>
+
+        <label id="confirmPasswordField" style="display:none">
+          Confirm New Password
+          <input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Re-enter new password" />
+        </label>
+
+        <label id="otpCodeField" style="display:none">
+          One-Time Verification Code (OTP)
+          <input id="otpCode" class="otp-code-input" type="text" inputmode="numeric" pattern="[0-9]{6,8}" maxlength="8" autocomplete="one-time-code" placeholder="123456" />
+        </label>
+
+        <div class="auth-aux-links" id="authAuxLinks">
+          <button type="button" class="auth-link-btn" id="forgotPasswordLink">Forgot password?</button>
+          <button type="button" class="auth-link-btn" id="resendOtpLink" style="display:none">Resend code</button>
+        </div>
+
+        <button id="authSubmit" type="submit">Sign in</button>
+      </form>
+
+      <p id="authMessage" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <div class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="theme.js"></script>
+  <script type="module" src="app.js"></script>
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="admin-access.js"></script>
+</body>
+</html>

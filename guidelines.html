@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f8f7f3" />
+  <meta name="description" content="Official rules, evaluation rubric, and submission guidelines for the AI Project Arena." />
+  <title>Rules &amp; Rubric — AI Project Arena</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap nav">
+      <a class="brand" href="index.html">
+        <span class="mark">A</span>
+        <span class="brand-meta">
+          <span>AI Project Arena</span>
+          <span class="brand-sub">DUET · Academic Showcase</span>
+        </span>
+      </a>
+      <nav class="navlinks" aria-label="Primary">
+        <a href="index.html">Overview</a>
+        <a href="projects.html">Showcase &amp; Results</a>
+        <a href="guidelines.html" aria-current="page">Rules &amp; Rubric</a>
+        <a href="index.html#process">How It Works</a>
+      </nav>
+      <div class="navactions">
+        <button class="btn" id="themeToggle" type="button" aria-label="Toggle dark mode">☾ Dark mode</button>
+        <a class="btn primary" href="index.html#roleChooser">Enter Arena ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap">
+        <div class="eyebrow">Academic Standards &amp; Protocol</div>
+        <h1>Submission Guidelines<br><span style="font-style:italic;color:var(--primary)">&amp; Evaluation Rubric.</span></h1>
+        <p>Every project submitted to the AI Project Arena undergoes faculty verification before entering the student voting exhibition.</p>
+      </div>
+    </section>
+
+    <section class="wrap" style="padding:42px 0">
+      <div class="eyebrow">Evaluation Criteria</div>
+      <h2 style="font-family:var(--serif);font-weight:400;font-size:34px;margin:8px 0 18px">How projects are evaluated</h2>
+      <div class="rubric-grid">
+        <article class="rubric-card">
+          <span class="rubric-weight">30% WEIGHT</span>
+          <h3>Problem Formulation &amp; Impact</h3>
+          <p>Clarity of the real-world campus, industrial, or research challenge addressed and relevance to target users.</p>
+        </article>
+        <article class="rubric-card">
+          <span class="rubric-weight">30% WEIGHT</span>
+          <h3>Technical Execution &amp; AI Depth</h3>
+          <p>Soundness of software architecture, model integration, prompt engineering, dataset handling, and reproducibility.</p>
+        </article>
+        <article class="rubric-card">
+          <span class="rubric-weight">25% WEIGHT</span>
+          <h3>Demonstration &amp; UX Clarity</h3>
+          <p>Quality of the YouTube walkthrough: showing real working features, interface responsiveness, and clear audio narration.</p>
+        </article>
+        <article class="rubric-card">
+          <span class="rubric-weight">15% WEIGHT</span>
+          <h3>Team Documentation &amp; Roster</h3>
+          <p>Complete roll number verification for every contributing member and a concise, accurate technical abstract.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="eyebrow">Checklist for Team Leads</div>
+        <h2>Before you submit</h2>
+        <div class="steps" style="margin-top:24px">
+          <article class="step">
+            <div class="stepnum">CHECK 01 · ROSTER</div>
+            <h3>Unique Roll Numbers</h3>
+            <p>Ensure every team member’s full name and official DUET roll number (e.g. <code style="font-family:var(--mono)">26F-CS-044</code>) are entered accurately without duplicates.</p>
+          </article>
+          <article class="step">
+            <div class="stepnum">CHECK 02 · VIDEO VISIBILITY</div>
+            <h3>Public or Unlisted YouTube Link</h3>
+            <p>Set your YouTube video visibility to <strong>Public</strong> or <strong>Unlisted</strong>. Private videos cannot play inside the faculty or voter review panels.</p>
+          </article>
+          <article class="step">
+            <div class="stepnum">CHECK 03 · REVISIONS</div>
+            <h3>Post-Approval Edits</h3>
+            <p>You can edit your roster or video link at any time. Note that modifying an already-approved project returns it to the faculty queue for re-verification.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="eyebrow">Frequently Asked Questions</div>
+        <h2>Authentication &amp; Voting FAQ</h2>
+        <div class="faq-list">
+          <details class="faq-item" open>
+            <summary>How do I sign in if I forgot my password or prefer not to use one? <span>+</span></summary>
+            <p>Open the sign-in modal on the main page and select either <strong>Email OTP</strong> (to receive a 6-digit one-time verification code in your inbox) or click <strong>Forgot password?</strong> to receive a password reset link.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can a student vote more than once? <span>+</span></summary>
+            <p>No. The database enforces a strict one-vote-per-authenticated-voter policy. Once your vote is confirmed, your ballot is locked for the remainder of the competition.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Are individual voter choices visible to teams or administrators? <span>+</span></summary>
+            <p>Never. Administrators only see aggregate vote counts per project, and students see final standings only after faculty publish official results.</p>
+          </details>
+          <details class="faq-item">
+            <summary>What happens if the submission deadline passes? <span>+</span></summary>
+            <p>You can still save your project details privately as a draft in your workspace, and submit it once the faculty committee opens the submission window.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footerinner">
+      <span>© 2026 AI Project Arena · Dawood University of Engineering &amp; Technology (DUET)</span>
+      <div class="footerlinks">
+        <a href="index.html">Overview</a>
+        <a href="projects.html">Showcase</a>
+        <a href="guidelines.html">Rules &amp; Rubric</a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="theme.js"></script>
+</body>
+</html>
