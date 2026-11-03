@@ -1748,6 +1748,8 @@ body.dark-mode .btn.primary:hover:not(:disabled) {
 
 /* Authenticated Workspace Isolation */
 body.authenticated-view .hero,
+body.authenticated-view .hero-stage,
+body.authenticated-view .hero-player,
 body.authenticated-view #roleChooser,
 body.authenticated-view #process,
 body.authenticated-view #joinCta {
@@ -2477,6 +2479,514 @@ body.dark-mode {
   }
   #deleteAllRejectedBtn {
     width: 100%;
+  }
+}
+
+/* ==========================================================================
+   FEATURED PROJECT SLIDESHOW HERO & LIVE VOTING CARD
+   ========================================================================== */
+
+.hero-stage {
+  --hero-anim: 1100ms;
+  --hero-slide-time: 10000ms;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: clamp(540px, 78vh, 690px);
+  display: flex;
+  align-items: center;
+  background: #080c14;
+  color: #f8fafc;
+  border-bottom: 1px solid var(--line);
+}
+
+.hero-stage.has-video {
+  cursor: pointer;
+}
+
+.hero-slides {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #080c14;
+}
+
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  visibility: hidden;
+  will-change: transform;
+  transition:
+    transform var(--hero-anim) cubic-bezier(0.65, 0, 0.25, 1),
+    visibility 0s linear var(--hero-anim);
+}
+
+.hero-slide.is-active {
+  transform: translateX(0);
+  visibility: visible;
+  transition-delay: 0s;
+  z-index: 2;
+}
+
+.hero-slide.is-leaving {
+  transform: translateX(100%);
+  visibility: visible;
+  transition-delay: 0s;
+  z-index: 1;
+}
+
+.hero-slide.no-anim {
+  transition: none !important;
+}
+
+.hero-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  filter: saturate(1.06) contrast(1.04);
+}
+
+.hero-slide.is-fallback {
+  background:
+    radial-gradient(circle at 18% 28%, rgba(59, 130, 246, 0.34), transparent 52%),
+    radial-gradient(circle at 82% 72%, rgba(245, 158, 11, 0.22), transparent 48%),
+    linear-gradient(135deg, #070b14 0%, #0f172a 55%, #1e293b 100%);
+}
+
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(6, 10, 18, 0.92) 0%,
+      rgba(6, 10, 18, 0.78) 46%,
+      rgba(6, 10, 18, 0.56) 74%,
+      rgba(6, 10, 18, 0.72) 100%
+    ),
+    linear-gradient(180deg, rgba(6, 10, 18, 0.35) 0%, transparent 35%, rgba(6, 10, 18, 0.88) 100%);
+}
+
+.hero-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(290px, 380px);
+  gap: 44px;
+  align-items: center;
+  padding: 72px 0 104px;
+}
+
+.hero-copy {
+  max-width: 640px;
+  transition:
+    opacity 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-copy.is-fading {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #fbbf24;
+  margin-bottom: 14px;
+}
+
+.hero-kicker::before {
+  content: "";
+  width: 24px;
+  height: 2px;
+  border-radius: 2px;
+  background: #fbbf24;
+}
+
+.hero-title {
+  margin: 0 0 14px;
+  font-family: var(--display);
+  font-size: clamp(32px, 4.4vw, 54px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.hero-desc {
+  margin: 0 0 26px;
+  font-size: clamp(15px, 1.35vw, 17.5px);
+  line-height: 1.62;
+  color: rgba(241, 245, 249, 0.86);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.hero-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-watch {
+  padding: 13px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  gap: 9px;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.38);
+}
+
+/* Right Voting Rectangle */
+.hero-vote {
+  cursor: default;
+  padding: 24px;
+  border-radius: var(--radius-xl);
+  background: rgba(15, 23, 42, 0.76);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
+  color: #f8fafc;
+}
+
+.hero-vote-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.hero-vote-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #e2e8f0;
+}
+
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #94a3b8;
+  display: inline-block;
+}
+
+.hero-vote[data-state="open"] .live-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.22);
+  animation: heroPulse 1.8s infinite;
+}
+
+@keyframes heroPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.18); opacity: 0.72; }
+}
+
+.hero-vote .showcase-badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-countdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.hero-countdown > div {
+  padding: 12px 6px;
+  border-radius: var(--radius-md);
+  background: rgba(8, 12, 20, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.hero-countdown b {
+  display: block;
+  font-family: var(--mono);
+  font-size: clamp(20px, 2.1vw, 26px);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+}
+
+.hero-countdown span {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.hero-vote[data-state="soon"] .hero-countdown,
+.hero-vote[data-state="ended"] .hero-countdown,
+.hero-vote[data-state="loading"] .hero-countdown {
+  opacity: 0.62;
+}
+
+.hero-vote-note {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.hero-vote-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 18px;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.hero-stage .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hero-vote-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+.hero-vote-link:hover {
+  text-decoration: underline;
+}
+
+/* Controls & Progress Bar */
+.hero-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.hero-controls-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+  width: fit-content;
+  margin-left: max(24px, calc((100vw - 1180px) / 2));
+}
+
+.hero-nav-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.68);
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.hero-nav-btn:hover {
+  background: rgba(37, 99, 235, 0.82);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.hero-counter {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.85);
+  letter-spacing: 0.06em;
+}
+
+.hero-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  z-index: 3;
+  overflow: hidden;
+}
+
+.hero-progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent, #f59e0b);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.hero-progress.run i {
+  animation: heroProgress var(--hero-slide-time, 10000ms) linear forwards;
+}
+
+.hero-progress.paused i {
+  animation-play-state: paused;
+}
+
+@keyframes heroProgress {
+  to { transform: scaleX(1); }
+}
+
+/* Modal Player for Clicked Hero Slide */
+body.hero-player-open {
+  overflow: hidden;
+}
+
+.hero-player {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.hero-player-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 10, 18, 0.84);
+  backdrop-filter: blur(10px);
+}
+
+.hero-player-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(940px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.65);
+}
+
+.hero-player-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.82);
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hero-player-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.hero-player-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.hero-player-info {
+  padding: 22px 24px 24px;
+}
+
+.hero-player-info h3 {
+  margin: 4px 0 8px;
+  font-family: var(--display);
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.hero-player-info p {
+  margin: 0 0 18px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-secondary);
+}
+
+.hero-player-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 980px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 48px 0 92px;
+  }
+  .hero-vote {
+    max-width: 460px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-stage {
+    min-height: 520px;
+  }
+  .hero-title {
+    font-size: clamp(26px, 7.5vw, 36px);
+  }
+  .hero-vote {
+    max-width: 100%;
+    padding: 18px;
+  }
+  .hero-controls-inner {
+    margin-left: 20px;
+  }
+  .hero-player {
+    padding: 10px;
+  }
+  .hero-player-info {
+    padding: 16px;
   }
 }
 

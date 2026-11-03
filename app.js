@@ -30,6 +30,39 @@ let cachedAdminMembersByGroup = new Map();
 let cachedAdminResults = [];
 
 const ADMIN_DISMISSED_KEY = 'arena_admin_dismissed_ids';
+const LOCAL_DRAFTS_KEY = 'arena_team_local_drafts';
+
+function getLocalDraft(groupId) {
+  if (!groupId) return null;
+  try {
+    const map = JSON.parse(localStorage.getItem(LOCAL_DRAFTS_KEY) || '{}');
+    return map[String(groupId)] || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLocalDraft(groupId, draft) {
+  if (!groupId) return;
+  try {
+    const map = JSON.parse(localStorage.getItem(LOCAL_DRAFTS_KEY) || '{}');
+    map[String(groupId)] = { ...draft, saved_at: new Date().toISOString() };
+    localStorage.setItem(LOCAL_DRAFTS_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn('Could not persist local draft', e);
+  }
+}
+
+function clearLocalDraft(groupId) {
+  if (!groupId) return;
+  try {
+    const map = JSON.parse(localStorage.getItem(LOCAL_DRAFTS_KEY) || '{}');
+    delete map[String(groupId)];
+    localStorage.setItem(LOCAL_DRAFTS_KEY, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
 
 function getDismissedRejectedIds() {
   try {
@@ -323,8 +356,12 @@ async function renderGroupCard(group) {
 
   const members = memberResult.data || [];
   const sub = submissionResult.data;
+  const localDraft = getLocalDraft(group.id);
+  const displaySub = sub || localDraft;
   const status = sub
     ? '<span class="dash-status ' + escapeHtml(sub.status) + '">' + escapeHtml(sub.status) + '</span>'
+    : localDraft
+    ? '<span class="dash-status draft">Private draft saved</span>'
     : '<span class="dash-status draft">Not submitted</span>';
 
   const roster = members
@@ -353,6 +390,15 @@ async function renderGroupCard(group) {
       : '';
 
   const draftMode = !submissionWindowOpen();
+  const localDraftNotice =
+    !sub && localDraft
+      ? '<div class="deadline-note" style="margin-top:10px"><div><strong>Saved Private Draft:</strong> ' +
+        (draftMode
+          ? 'Your draft is saved on this device while submissions are closed. Once the admin opens the submission window, click <em>Submit for Faculty Review</em> below.'
+          : 'Submissions are now open! Review your saved draft below and click <em>Submit for Faculty Review</em> to send it to the faculty queue.') +
+        '</div></div>'
+      : '';
+
   const formHtml =
     '<form class="submission-form" data-group="' +
     escapeHtml(group.id) +
@@ -362,16 +408,16 @@ async function renderGroupCard(group) {
     escapeHtml(sub ? sub.status : '') +
     '">' +
     '<h3>' +
-    (sub ? 'Edit Project Submission' : 'Submit Project Demonstration') +
+    (sub ? 'Edit Project Submission' : localDraft ? 'Continue Saved Draft' : 'Submit Project Demonstration') +
     '</h3>' +
     '<label class="dash-field">Project Title<input name="title" maxlength="140" required value="' +
-    escapeHtml(sub ? sub.title : '') +
+    escapeHtml(displaySub ? displaySub.title : '') +
     '" placeholder="e.g. Autonomous Traffic Signal Optimizer"></label>' +
     '<label class="dash-field">Technical Abstract &amp; Description<textarea name="description" maxlength="5000" required placeholder="Explain the engineering problem, your architecture/models used, and key outcomes">' +
-    escapeHtml(sub ? sub.description : '') +
+    escapeHtml(displaySub ? displaySub.description : '') +
     '</textarea></label>' +
     '<label class="dash-field">YouTube Demonstration Link<input name="videoUrl" type="url" required value="' +
-    escapeHtml(sub && sub.video_url ? sub.video_url : '') +
+    escapeHtml(displaySub && displaySub.video_url ? displaySub.video_url : '') +
     '" placeholder="https://www.youtube.com/watch?v=…"></label>' +
     '<p class="youtube-link-note">Supports standard YouTube watch links, youtu.be share links, or YouTube Shorts. ' +
     (draftMode
@@ -384,21 +430,21 @@ async function renderGroupCard(group) {
     '<div class="dash-message" role="status"></div>' +
     '</form>';
 
-  const embedUrl = sub && sub.video_url ? getYoutubeEmbedUrl(sub.video_url) : null;
+  const embedUrl = displaySub && displaySub.video_url ? getYoutubeEmbedUrl(displaySub.video_url) : null;
   const video = embedUrl
     ? '<div class="youtube-player"><iframe src="' +
       escapeHtml(embedUrl) +
       '" title="' +
-      escapeHtml(sub.title) +
+      escapeHtml(displaySub.title) +
       ' video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'
-    : sub && sub.video_url
+    : displaySub && displaySub.video_url
     ? '<p class="dash-help"><a href="' +
-      escapeHtml(sub.video_url) +
+      escapeHtml(displaySub.video_url) +
       '" target="_blank" rel="noopener">Open submitted video ↗</a></p>'
     : '';
 
   return {
-    hasSubmission: Boolean(sub),
+    hasSubmission: Boolean(displaySub),
     isApproved: Boolean(sub && sub.status === 'approved'),
     html:
       '<article class="group-panel">' +
@@ -421,14 +467,15 @@ async function renderGroupCard(group) {
       '</div>' +
       '<div class="dash-message" role="status"></div>' +
       '</div>' +
-      (sub
+      (displaySub
         ? '<div style="font-size:14px;margin-top:10px"><strong>' +
-          escapeHtml(sub.title) +
+          escapeHtml(displaySub.title) +
           '</strong><p class="dash-help" style="margin-top:4px">' +
-          escapeHtml(sub.description) +
+          escapeHtml(displaySub.description) +
           '</p></div>' +
           video +
-          feedback
+          feedback +
+          localDraftNotice
         : '') +
       formHtml +
       '</article>',
@@ -845,7 +892,10 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
   const messageEl = form.querySelector('.dash-message');
   button.disabled = true;
   button.textContent = 'Saving…';
-  if (messageEl) messageEl.textContent = '';
+  if (messageEl) {
+    messageEl.textContent = '';
+    messageEl.style.color = '';
+  }
 
   try {
     const isOpen = submissionWindowOpen();
@@ -876,15 +926,56 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
       updated_at: new Date().toISOString(),
     };
 
-    let saved;
-    if (submissionId) {
-      saved = await supabase.from('project_submissions').update(payload).eq('id', submissionId);
-    } else {
-      saved = await supabase.from('project_submissions').insert({ ...payload, group_id: groupId });
+    const runDbSave = async (rowPayload) => {
+      if (submissionId) {
+        return supabase.from('project_submissions').update(rowPayload).eq('id', submissionId);
+      }
+      return supabase.from('project_submissions').insert({ ...rowPayload, group_id: groupId });
+    };
+
+    let saved = await runDbSave(payload);
+
+    // If database RLS rejects 'draft' status, try 'pending' in case the DB window is open
+    const isRlsError = (err) =>
+      err &&
+      (err.code === '42501' ||
+        /row-level security|violates row-level/i.test(String(err.message || '')));
+
+    if (saved.error && isRlsError(saved.error) && payload.status === 'draft') {
+      const retryPending = await runDbSave({ ...payload, status: 'pending' });
+      if (!retryPending.error) {
+        saved = retryPending;
+      }
     }
-    if (saved.error) throw saved.error;
+
+    if (saved.error) {
+      if (isRlsError(saved.error)) {
+        // Always preserve the student's work locally so nothing is lost
+        saveLocalDraft(groupId, {
+          title,
+          description,
+          video_url: videoUrl,
+          status: 'draft',
+        });
+
+        if (!isOpen) {
+          // User clicked "Save Private Draft" while submissions are closed in DB
+          showToast('Private draft saved!');
+          await loadDashboard(activeUser);
+          return;
+        }
+
+        throw new Error(
+          'Database RLS blocked saving because the submission window is closed in Supabase or draft/update policy needs updating. Your draft has been saved locally on this device.'
+        );
+      }
+      throw saved.error;
+    }
+
+    clearLocalDraft(groupId);
 
     if (messageEl) {
+      messageEl.style.color = 'var(--success)';
       messageEl.textContent = isOpen
         ? 'Submission sent to the faculty review queue.'
         : 'Private draft saved.';
@@ -898,7 +989,12 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
     }
   } finally {
     button.disabled = false;
-    button.textContent = form.dataset.submission ? 'Update Submission' : 'Submit for Faculty Review';
+    const draftMode = !submissionWindowOpen();
+    button.textContent = draftMode
+      ? 'Save Private Draft'
+      : form.dataset.submission
+      ? 'Update Submission'
+      : 'Submit for Faculty Review';
   }
 });
 
