@@ -1636,3 +1636,112 @@ document.getElementById('unpublishResultsNow')?.addEventListener('click', () => 
 document.querySelectorAll('[data-toast]').forEach((b) =>
   b.addEventListener('click', () => showToast(b.dataset.toast))
 );
+
+
+/* HOMEPAGE FEATURED PROJECT SLIDER + LIVE VOTING CLOCK */
+let homeFeaturedProjects = [];
+let homeFeaturedIndex = 0;
+let homeFeaturedInterval = null;
+let homeVotingInterval = null;
+let homeVotingDeadline = null;
+let homeVotingIsOpen = false;
+
+function renderFeaturedProject(index, animate = true) {
+  const stage = document.getElementById('featuredStage');
+  const backdrop = document.getElementById('featuredBackdrop');
+  const copy = document.getElementById('featuredCopy');
+  if (!stage || !backdrop || !copy || !homeFeaturedProjects.length) return;
+  const project = homeFeaturedProjects[index];
+  const imageUrl = project.thumbnail_path ? supabase.storage.from('project-thumbnails').getPublicUrl(project.thumbnail_path).data.publicUrl : '';
+  const videoMatch = String(project.video_url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{11})/);
+  const fallbackImage = videoMatch ? 'https://img.youtube.com/vi/' + videoMatch[1] + '/maxresdefault.jpg' : '';
+  const chosenImage = imageUrl || fallbackImage;
+  const update = () => {
+    backdrop.style.backgroundImage = chosenImage ? 'linear-gradient(90deg, rgba(5,9,17,.88), rgba(5,9,17,.28)), url("' + chosenImage.replace(/"/g, '%22') + '")' : 'linear-gradient(120deg, #101a2d, #243b5c)';
+    document.getElementById('featuredTitle').textContent = project.project_title || 'Featured student project';
+    document.getElementById('featuredDescription').textContent = project.project_description || 'Watch this faculty-approved student demonstration.';
+    document.getElementById('featuredCounter').textContent = 'FEATURED PROJECT ' + String(index + 1).padStart(2, '0') + ' / ' + String(homeFeaturedProjects.length).padStart(2, '0');
+    stage.href = project.video_url || 'projects.html';
+    stage.target = project.video_url ? '_blank' : '_self';
+    stage.rel = project.video_url ? 'noopener noreferrer' : '';
+    stage.setAttribute('aria-label', 'Watch ' + (project.project_title || 'featured project'));
+  };
+  if (!animate) { update(); return; }
+  stage.classList.add('is-sliding-out'); copy.classList.add('is-copy-out');
+  window.setTimeout(() => {
+    backdrop.classList.add('is-entering'); update();
+    stage.classList.remove('is-sliding-out'); stage.classList.add('is-sliding-in');
+    copy.classList.remove('is-copy-out'); copy.classList.add('is-copy-in');
+    window.setTimeout(() => { stage.classList.remove('is-sliding-in'); backdrop.classList.remove('is-entering'); copy.classList.remove('is-copy-in'); }, 850);
+  }, 420);
+}
+
+async function loadHomeFeaturedProjects() {
+  const stage = document.getElementById('featuredStage');
+  if (!stage) return;
+  try {
+    const { data, error } = await supabase.rpc('get_homepage_featured_projects');
+    if (error) throw error;
+    homeFeaturedProjects = (data || []).filter((p) => p.thumbnail_path || p.video_url);
+    if (!homeFeaturedProjects.length) {
+      document.getElementById('featuredTitle').textContent = 'Your project could be featured here.';
+      document.getElementById('featuredDescription').textContent = 'Submit your project video and a JPG or PNG thumbnail. Once faculty approves it, it can appear in this rotating showcase.';
+      document.getElementById('featuredCounter').textContent = 'DUET STUDENT SHOWCASE';
+      stage.href = 'projects.html'; return;
+    }
+    homeFeaturedIndex = 0; renderFeaturedProject(0, false);
+    if (homeFeaturedInterval) clearInterval(homeFeaturedInterval);
+    if (homeFeaturedProjects.length > 1) homeFeaturedInterval = setInterval(() => {
+      homeFeaturedIndex = (homeFeaturedIndex + 1) % homeFeaturedProjects.length;
+      renderFeaturedProject(homeFeaturedIndex, true);
+    }, 10000);
+  } catch (error) {
+    console.warn('Could not load homepage featured projects:', error);
+    document.getElementById('featuredTitle').textContent = 'Student projects. Big-screen ideas.';
+    document.getElementById('featuredDescription').textContent = 'Explore faculty-approved demonstrations created by DUET students.';
+  }
+}
+
+function formatHomeCountdown(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(total / 86400), hours = Math.floor((total % 86400) / 3600), minutes = Math.floor((total % 3600) / 60), seconds = total % 60;
+  return days > 0 ? days + 'd ' + String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0') : String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0');
+}
+
+function updateHomeVotingClock() {
+  const timer = document.getElementById('homeVotingTimer'), status = document.getElementById('votingHeroStatus'), message = document.getElementById('homeVotingMessage'), deadlineLabel = document.getElementById('homeVotingDeadline'), voteButton = document.getElementById('homeVoteNow');
+  if (!timer || !status || !message || !voteButton) return;
+  const remaining = homeVotingDeadline ? homeVotingDeadline.getTime() - Date.now() : 0;
+  const active = homeVotingIsOpen && homeVotingDeadline && remaining > 0;
+  status.textContent = active ? 'Voting is open' : 'Voting is closed';
+  status.classList.toggle('is-live', !!active);
+  timer.textContent = active ? formatHomeCountdown(remaining) : '00:00:00';
+  message.textContent = active ? 'Cast your single verified vote before the countdown ends.' : 'The official countdown will begin here when faculty opens voting.';
+  deadlineLabel.textContent = homeVotingDeadline ? 'Closes ' + homeVotingDeadline.toLocaleString([], { dateStyle:'medium', timeStyle:'short' }) : 'Voting not started';
+  voteButton.disabled = !active; voteButton.textContent = active ? 'Vote Now ↗' : 'Voting Closed';
+}
+
+async function loadHomeVotingStatus() {
+  try {
+    const { data, error } = await supabase.from('competition_settings').select('voting_open,voting_deadline').eq('id', true).maybeSingle();
+    if (error) throw error;
+    homeVotingIsOpen = !!data?.voting_open;
+    homeVotingDeadline = data?.voting_deadline ? new Date(data.voting_deadline) : null;
+    if (homeVotingInterval) clearInterval(homeVotingInterval);
+    updateHomeVotingClock(); homeVotingInterval = setInterval(updateHomeVotingClock, 1000);
+  } catch (error) {
+    console.warn('Could not load homepage voting status:', error);
+    const msg = document.getElementById('homeVotingMessage');
+    if (msg) msg.textContent = 'Voting schedule is currently unavailable.';
+  }
+}
+
+document.getElementById('homeVoteNow')?.addEventListener('click', () => {
+  if (!homeVotingIsOpen || !homeVotingDeadline || homeVotingDeadline.getTime() <= Date.now()) return;
+  if (activeUser && currentArenaRole === 'voter') voterDashboard?.scrollIntoView({ behavior:'smooth' });
+  else roleChooser?.scrollIntoView({ behavior:'smooth' });
+});
+
+if (document.getElementById('featuredStage')) {
+  loadHomeFeaturedProjects(); loadHomeVotingStatus(); setInterval(loadHomeVotingStatus, 30000);
+}
