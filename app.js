@@ -267,7 +267,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
   nav.querySelectorAll('.profile-menu-wrap, .user-chip, [data-signout]').forEach((n) => n.remove());
 
   if (session) {
-    // Hide unauthenticated Sign In and Join Arena buttons
+    // Hide unauthenticated Sign In and Join DuetFlix buttons
     nav.querySelectorAll('#headerChooseRole, #headerSignIn').forEach((b) => (b.hidden = true));
 
     const userEmail = session.user.email || 'Signed-in User';
@@ -278,12 +278,12 @@ supabase.auth.onAuthStateChange((_event, session) => {
     profileWrap.innerHTML =
       '<button type="button" class="profile-trigger" aria-expanded="false" aria-label="Account profile menu">' +
       '<span class="profile-avatar">' + escapeHtml(initial) + '</span>' +
-      '<span class="profile-trigger-role" id="headerRoleBadge">Arena</span>' +
+      '<span class="profile-trigger-role" id="headerRoleBadge">DuetFlix</span>' +
       '<span class="profile-trigger-caret" aria-hidden="true">▾</span>' +
       '</button>' +
       '<div class="profile-dropdown" role="menu">' +
       '<div class="profile-dropdown-header">' +
-      '<div class="profile-dropdown-label"><span>Signed in as</span><span class="role-pill" id="dropdownRolePill">Arena</span></div>' +
+      '<div class="profile-dropdown-label"><span>Signed in as</span><span class="role-pill" id="dropdownRolePill">DuetFlix</span></div>' +
       '<div class="profile-dropdown-email">' + escapeHtml(userEmail) + '</div>' +
       '</div>' +
       '<div class="profile-dropdown-actions">' +
@@ -309,7 +309,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
     profileWrap.querySelector('[data-signout]').addEventListener('click', async () => {
       profileWrap.classList.remove('open');
       await supabase.auth.signOut();
-      showToast('Signed out of AI Project Arena.');
+      showToast('Signed out of DuetFlix.');
     });
 
     nav.append(profileWrap);
@@ -321,13 +321,14 @@ supabase.auth.onAuthStateChange((_event, session) => {
         const dropdownPill = document.getElementById('dropdownRolePill');
 
         if (isArenaAdmin) {
+          activeUser = session.user;
           if (roleBadge) roleBadge.textContent = 'Admin';
           if (dropdownPill) dropdownPill.textContent = 'Admin';
           document.body.classList.add('authenticated-view');
           dashboard?.classList.remove('visible');
-          voterDashboard?.classList.remove('visible');
+          await loadVoterDashboard(session.user, { keepTeamView: true });
           adminDashboard?.classList.add('visible');
-          adminDashboard?.scrollIntoView({ behavior: 'auto' });
+          handlePendingWatchRedirect();
           return;
         }
 
@@ -367,8 +368,9 @@ supabase.auth.onAuthStateChange((_event, session) => {
           dashboard?.classList.remove('visible');
           await loadVoterDashboard(session.user);
         }
+        handlePendingWatchRedirect();
       } catch (err) {
-        console.error('Arena role routing failed', err);
+        console.error('DuetFlix role routing failed', err);
         const msg = document.getElementById('voterMessage');
         if (msg) msg.textContent = err.message || 'Could not open your account dashboard.';
         document.body.classList.remove('authenticated-view');
@@ -608,9 +610,10 @@ async function loadDashboard(user) {
 
   const notice = document.getElementById('competitionNotice');
   if (competitionSettings && notice) {
+    const cleanTitle = String(competitionSettings.title || 'DuetFlix').replace(/AI Project Arena/gi, 'DuetFlix');
     notice.innerHTML =
       '<span><strong>' +
-      escapeHtml(competitionSettings.title || 'AI Project Arena') +
+      escapeHtml(cleanTitle) +
       ':</strong> ' +
       (competitionSettings.submissions_open
         ? 'Submissions are open'
@@ -1536,7 +1539,7 @@ async function loadAdminDashboard() {
     s.voting_open = false;
   }
 
-  document.getElementById('adminTitle').value = s.title || '';
+  document.getElementById('adminTitle').value = String(s.title || 'DuetFlix').replace(/AI Project Arena/gi, 'DuetFlix');
   document.getElementById('adminSubmissionDeadline').value = localDate(s.submission_deadline);
   document.getElementById('adminVotingDeadline').value = localDate(s.voting_deadline);
   document.getElementById('adminSubmissionsOpen').checked = !!s.submissions_open;
@@ -1614,7 +1617,7 @@ document.getElementById('exportAdminCsv')?.addEventListener('click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `ai-project-arena-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `duetflix-report-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1848,6 +1851,55 @@ let homeVotingInterval = null;
 let homeVotingDeadline = null;
 let homeVotingIsOpen = false;
 
+function scrollToProjectVideo(subId, titleText) {
+  if (!voterDashboard) return;
+  voterDashboard.classList.add('visible');
+  const searchInput = document.getElementById('voterSearchInput');
+  if (searchInput && searchInput.value) {
+    searchInput.value = '';
+    renderVoterProjects();
+  }
+  const list = document.getElementById('voterProjectList');
+  let targetCard = null;
+  if (list && subId) {
+    try {
+      targetCard = list.querySelector(`[data-vote-submission="${CSS.escape(String(subId))}"]`);
+    } catch {
+      targetCard = [...list.querySelectorAll('.voter-card')].find(
+        (c) => c.getAttribute('data-vote-submission') === String(subId)
+      );
+    }
+  }
+  if (!targetCard && list && titleText) {
+    const norm = String(titleText).trim().toLowerCase();
+    targetCard = [...list.querySelectorAll('.voter-card')].find(
+      (c) => (c.querySelector('h3')?.textContent || '').trim().toLowerCase() === norm
+    );
+  }
+  if (targetCard) {
+    document
+      .querySelectorAll('.voter-card.is-focused-video')
+      .forEach((c) => c.classList.remove('is-focused-video'));
+    targetCard.classList.add('is-focused-video');
+    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => targetCard.classList.remove('is-focused-video'), 4500);
+  } else {
+    voterDashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function handlePendingWatchRedirect() {
+  try {
+    const raw = sessionStorage.getItem('duetflix_pending_watch');
+    if (!raw) return;
+    sessionStorage.removeItem('duetflix_pending_watch');
+    const parsed = JSON.parse(raw);
+    window.setTimeout(() => {
+      scrollToProjectVideo(parsed?.submissionId || '', parsed?.projectTitle || '');
+    }, 120);
+  } catch {}
+}
+
 function renderFeaturedProject(index, animate = true) {
   const stage = document.getElementById('featuredStage');
   const backdrop = document.getElementById('featuredBackdrop');
@@ -1858,15 +1910,19 @@ function renderFeaturedProject(index, animate = true) {
   const videoMatch = String(project.video_url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{11})/);
   const fallbackImage = videoMatch ? 'https://img.youtube.com/vi/' + videoMatch[1] + '/maxresdefault.jpg' : '';
   const chosenImage = imageUrl || fallbackImage;
+  const subId = project.submission_id || project.id || '';
+  const projTitle = project.project_title || '';
   const update = () => {
     backdrop.style.backgroundImage = chosenImage ? 'url("' + chosenImage.replace(/"/g, '%22') + '")' : 'linear-gradient(120deg, #101a2d, #243b5c)';
-    document.getElementById('featuredTitle').textContent = project.project_title || 'Featured student project';
+    document.getElementById('featuredTitle').textContent = projTitle || 'Featured student project';
     document.getElementById('featuredDescription').textContent = project.project_description || 'Watch this faculty-approved student demonstration.';
     document.getElementById('featuredCounter').textContent = 'FEATURED PROJECT ' + String(index + 1).padStart(2, '0') + ' / ' + String(homeFeaturedProjects.length).padStart(2, '0');
-    stage.href = project.video_url || 'projects.html';
-    stage.target = project.video_url ? '_blank' : '_self';
-    stage.rel = project.video_url ? 'noopener noreferrer' : '';
-    stage.setAttribute('aria-label', 'Watch ' + (project.project_title || 'featured project'));
+    stage.dataset.submissionId = String(subId);
+    stage.dataset.projectTitle = String(projTitle);
+    stage.href = '#voterDashboard';
+    stage.removeAttribute('target');
+    stage.removeAttribute('rel');
+    stage.setAttribute('aria-label', 'Watch ' + (projTitle || 'featured project'));
   };
   if (!animate) { update(); return; }
   stage.classList.add('is-sliding-out'); copy.classList.add('is-copy-out');
@@ -1877,6 +1933,48 @@ function renderFeaturedProject(index, animate = true) {
     window.setTimeout(() => { stage.classList.remove('is-sliding-in'); backdrop.classList.remove('is-entering'); copy.classList.remove('is-copy-in'); }, 850);
   }, 420);
 }
+
+document.getElementById('featuredStage')?.addEventListener('click', async (e) => {
+  const arrow = e.target.closest('.featured-arrows span');
+  if (arrow && homeFeaturedProjects.length > 1) {
+    e.preventDefault();
+    e.stopPropagation();
+    const isPrev = arrow === arrow.parentElement?.firstElementChild;
+    homeFeaturedIndex =
+      (homeFeaturedIndex + (isPrev ? -1 : 1) + homeFeaturedProjects.length) %
+      homeFeaturedProjects.length;
+    renderFeaturedProject(homeFeaturedIndex, true);
+    return;
+  }
+
+  e.preventDefault();
+  const stage = e.currentTarget;
+  const subId = stage.dataset.submissionId || '';
+  const titleText = stage.dataset.projectTitle || '';
+
+  if (!activeUser) {
+    try {
+      sessionStorage.setItem(
+        'duetflix_pending_watch',
+        JSON.stringify({ submissionId: subId, projectTitle: titleText })
+      );
+    } catch {}
+    if (typeof window.openArenaAuth === 'function') {
+      window.openArenaAuth('signin', 'voter');
+    } else {
+      roleChooser?.scrollIntoView({ behavior: 'smooth' });
+    }
+    showToast('Please sign in to watch "' + (titleText || 'this project') + '".');
+    return;
+  }
+
+  if (!cachedVoterProjects.length) {
+    await loadVoterDashboard(activeUser, {
+      keepTeamView: currentArenaRole === 'team' || isArenaAdmin,
+    });
+  }
+  scrollToProjectVideo(subId, titleText);
+});
 
 async function loadHomeFeaturedProjects() {
   const stage = document.getElementById('featuredStage');
@@ -1889,7 +1987,7 @@ async function loadHomeFeaturedProjects() {
       document.getElementById('featuredTitle').textContent = 'Your project could be featured here.';
       document.getElementById('featuredDescription').textContent = 'Submit your project video and a JPG or PNG thumbnail. Once faculty approves it, it can appear in this rotating showcase.';
       document.getElementById('featuredCounter').textContent = 'DUET STUDENT SHOWCASE';
-      stage.href = 'projects.html'; return;
+      stage.href = '#voterDashboard'; return;
     }
     homeFeaturedIndex = 0; renderFeaturedProject(0, false);
     if (homeFeaturedInterval) clearInterval(homeFeaturedInterval);

@@ -1,4 +1,4 @@
-# AI Project Arena
+# DuetFlix
 
 Files:
 - index.html: the site and dashboards, with the sign-in modal markup.

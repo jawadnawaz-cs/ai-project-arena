@@ -1,4 +1,4 @@
-// Authentication, Create Account, Google OAuth, and Forgot Password (via Email OTP) for AI Project Arena
+// Authentication, Create Account, Google OAuth, and Forgot Password (via Email OTP) for DuetFlix
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.118.0";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
@@ -66,13 +66,13 @@ function updateSubtitle() {
   if (!subtitle) return;
   const roleLabel = getSelectedRole() === "team" ? "Uploader / Team Lead" : "Voter / Evaluator";
   if (mode === "signup") {
-    subtitle.textContent = `Create your ${roleLabel} account to join the arena.`;
+    subtitle.textContent = `Create your ${roleLabel} account to join DuetFlix.`;
   } else if (mode === "forgot") {
     subtitle.textContent = "Enter your email address to receive a one-time recovery OTP code.";
   } else if (mode === "forgot-verify") {
     subtitle.textContent = `Enter the OTP code sent to ${recoveryEmail || "your email"} and choose a new password.`;
   } else if (mode === "reset-password") {
-    subtitle.textContent = "Choose a strong new password (at least 8 characters) for your Arena account.";
+    subtitle.textContent = "Choose a strong new password (at least 8 characters) for your DuetFlix account.";
   } else {
     subtitle.textContent = `Sign in to your ${roleLabel} workspace.`;
   }
@@ -135,7 +135,7 @@ function setMode(next) {
     else if (isForgotRequest) title.textContent = "Forgot your password?";
     else if (isForgotVerify) title.textContent = "Verify Email OTP";
     else if (isReset) title.textContent = "Set a new password";
-    else title.textContent = "Welcome to the Arena";
+    else title.textContent = "Welcome to DuetFlix";
   }
 
   if (submit) {
