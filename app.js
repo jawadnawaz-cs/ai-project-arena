@@ -64,6 +64,21 @@ function clearLocalDraft(groupId) {
   }
 }
 
+function resolveThumbnailUrl(thumbnailPath) {
+  if (!thumbnailPath) return '';
+  if (/^(https?:\/\/|data:image\/)/i.test(thumbnailPath)) return thumbnailPath;
+  return supabase.storage.from('project-thumbnails').getPublicUrl(thumbnailPath).data.publicUrl || '';
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Could not read thumbnail file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function getDismissedRejectedIds() {
   try {
     return new Set(JSON.parse(localStorage.getItem(ADMIN_DISMISSED_KEY) || '[]'));
@@ -347,7 +362,7 @@ async function renderGroupCard(group) {
       .order('created_at'),
     supabase
       .from('project_submissions')
-      .select('id,title,description,video_url,video_path,status,admin_feedback,updated_at')
+      .select('id,title,description,video_url,video_path,thumbnail_path,status,admin_feedback,updated_at')
       .eq('group_id', group.id)
       .maybeSingle(),
   ]);
@@ -406,6 +421,8 @@ async function renderGroupCard(group) {
     escapeHtml(sub ? sub.id : '') +
     '" data-current-status="' +
     escapeHtml(sub ? sub.status : '') +
+    '" data-current-thumbnail="' +
+    escapeHtml(displaySub && displaySub.thumbnail_path ? displaySub.thumbnail_path : '') +
     '">' +
     '<h3>' +
     (sub ? 'Edit Project Submission' : localDraft ? 'Continue Saved Draft' : 'Submit Project Demonstration') +
@@ -419,6 +436,10 @@ async function renderGroupCard(group) {
     '<label class="dash-field">YouTube Demonstration Link<input name="videoUrl" type="url" required value="' +
     escapeHtml(displaySub && displaySub.video_url ? displaySub.video_url : '') +
     '" placeholder="https://www.youtube.com/watch?v=…"></label>' +
+    '<label class="dash-field">Video Thumbnail (PNG or JPG)<input name="thumbnailFile" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg"></label>' +
+    '<p class="youtube-link-note">Upload one JPG or PNG image (maximum 5 MB). This image will be used as your project video thumbnail and as the background image in the homepage featured-project area. ' +
+    (displaySub && displaySub.thumbnail_path ? 'A thumbnail is already attached. Choose a new file only if you want to replace it.' : 'A thumbnail is optional, but recommended.') +
+    '</p>' +
     '<p class="youtube-link-note">Supports standard YouTube watch links, youtu.be share links, or YouTube Shorts. ' +
     (draftMode
       ? 'Submissions are currently closed, so changes will be saved privately as a draft.'
@@ -467,6 +488,9 @@ async function renderGroupCard(group) {
       '</div>' +
       '<div class="dash-message" role="status"></div>' +
       '</div>' +
+      (displaySub && displaySub.thumbnail_path
+        ? '<img class="project-thumbnail team-submission-thumbnail" src="' + escapeHtml(resolveThumbnailUrl(displaySub.thumbnail_path)) + '" alt="' + escapeHtml(displaySub.title) + ' thumbnail" loading="lazy">'
+        : '') +
       (displaySub
         ? '<div style="font-size:14px;margin-top:10px"><strong>' +
           escapeHtml(displaySub.title) +
@@ -617,6 +641,7 @@ function renderVoterProjects() {
         '<div class="eyebrow">' +
         escapeHtml(x.team_name || 'Student Team') +
         '</div>' +
+        (x.thumbnail_path ? '<img class="project-thumbnail" src="' + escapeHtml(resolveThumbnailUrl(x.thumbnail_path)) + '" alt="' + escapeHtml(x.project_title) + ' thumbnail" loading="lazy">' : '') +
         '<h3>' +
         escapeHtml(x.project_title) +
         '</h3>' +
@@ -905,6 +930,7 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
     const title = String(fd.get('title') || '').trim();
     const description = String(fd.get('description') || '').trim();
     const videoUrl = String(fd.get('videoUrl') || '').trim();
+    const thumbnailFile = fd.get('thumbnailFile');
 
     if (!title || !description) throw new Error('Enter a project title and technical description.');
     if (!videoUrl) throw new Error('Paste your YouTube demonstration link.');
@@ -912,11 +938,55 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
       throw new Error('Enter a valid YouTube link (watch, youtu.be, or Shorts).');
     }
 
+    const isRlsError = (err) =>
+      err &&
+      (err.code === '42501' ||
+        err.statusCode === '403' ||
+        /row-level security|violates row-level/i.test(String(err.message || '')));
+
+    let thumbnailPath = form.dataset.currentThumbnail || null;
+    if (thumbnailFile && thumbnailFile.size > 0) {
+      const allowedTypes = ['image/jpeg', 'image/png'];
+      const extension = thumbnailFile.name.split('.').pop().toLowerCase();
+      if (!allowedTypes.includes(thumbnailFile.type) || !['jpg', 'jpeg', 'png'].includes(extension)) {
+        throw new Error('Thumbnail must be a JPG or PNG image.');
+      }
+      if (thumbnailFile.size > 5 * 1024 * 1024) throw new Error('Thumbnail must be 5 MB or smaller.');
+      const ext = extension === 'jpeg' ? 'jpg' : extension;
+      const filePath = `${groupId}/${activeUser.id}/${crypto.randomUUID()}.${ext}`;
+      let upload = await supabase.storage
+        .from('project-thumbnails')
+        .upload(filePath, thumbnailFile, { contentType: thumbnailFile.type, upsert: true });
+
+      if (upload.error && isRlsError(upload.error)) {
+        // Retry with user_id as first folder segment in case Storage RLS checks foldername(name)[1] = auth.uid()
+        const altPath = `${activeUser.id}/${groupId}/${crypto.randomUUID()}.${ext}`;
+        const retryUpload = await supabase.storage
+          .from('project-thumbnails')
+          .upload(altPath, thumbnailFile, { contentType: thumbnailFile.type, upsert: true });
+        if (!retryUpload.error) {
+          upload = retryUpload;
+        }
+      }
+
+      if (upload.error) {
+        if (isRlsError(upload.error)) {
+          // Preserve thumbnail as a Data URL so Storage RLS never blocks draft/submission saving
+          thumbnailPath = await fileToDataUrl(thumbnailFile);
+        } else {
+          throw upload.error;
+        }
+      } else {
+        thumbnailPath = upload.data.path;
+      }
+    }
+
     const payload = {
       title,
       description,
       video_url: videoUrl,
       video_path: null,
+      thumbnail_path: thumbnailPath,
       status:
         submissionId && form.dataset.currentStatus === 'approved'
           ? 'pending'
@@ -936,11 +1006,6 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
     let saved = await runDbSave(payload);
 
     // If database RLS rejects 'draft' status, try 'pending' in case the DB window is open
-    const isRlsError = (err) =>
-      err &&
-      (err.code === '42501' ||
-        /row-level security|violates row-level/i.test(String(err.message || '')));
-
     if (saved.error && isRlsError(saved.error) && payload.status === 'draft') {
       const retryPending = await runDbSave({ ...payload, status: 'pending' });
       if (!retryPending.error) {
@@ -948,25 +1013,35 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
       }
     }
 
+    // If thumbnail_path is a Data URL and DB column has a length constraint or RLS check, retry with null thumbnail_path in DB while keeping thumbnail in localDraft
+    if (saved.error && thumbnailPath && thumbnailPath.startsWith('data:image/')) {
+      const retryNoThumb = await runDbSave({
+        ...payload,
+        thumbnail_path: form.dataset.currentThumbnail || null,
+      });
+      if (!retryNoThumb.error) {
+        saved = retryNoThumb;
+      }
+    }
+
     if (saved.error) {
       if (isRlsError(saved.error)) {
-        // Always preserve the student's work locally so nothing is lost
         saveLocalDraft(groupId, {
           title,
           description,
           video_url: videoUrl,
+          thumbnail_path: thumbnailPath,
           status: 'draft',
         });
 
         if (!isOpen) {
-          // User clicked "Save Private Draft" while submissions are closed in DB
           showToast('Private draft saved!');
           await loadDashboard(activeUser);
           return;
         }
 
         throw new Error(
-          'Database RLS blocked saving because the submission window is closed in Supabase or draft/update policy needs updating. Your draft has been saved locally on this device.'
+          'Database RLS blocked saving because the submission window is closed in Supabase or draft/storage policy needs updating. Your draft and thumbnail have been saved locally on this device.'
         );
       }
       throw saved.error;
@@ -1707,3 +1782,112 @@ document.getElementById('unpublishResultsNow')?.addEventListener('click', () => 
 document.querySelectorAll('[data-toast]').forEach((b) =>
   b.addEventListener('click', () => showToast(b.dataset.toast))
 );
+
+
+/* HOMEPAGE FEATURED PROJECT SLIDER + LIVE VOTING CLOCK */
+let homeFeaturedProjects = [];
+let homeFeaturedIndex = 0;
+let homeFeaturedInterval = null;
+let homeVotingInterval = null;
+let homeVotingDeadline = null;
+let homeVotingIsOpen = false;
+
+function renderFeaturedProject(index, animate = true) {
+  const stage = document.getElementById('featuredStage');
+  const backdrop = document.getElementById('featuredBackdrop');
+  const copy = document.getElementById('featuredCopy');
+  if (!stage || !backdrop || !copy || !homeFeaturedProjects.length) return;
+  const project = homeFeaturedProjects[index];
+  const imageUrl = project.thumbnail_path ? resolveThumbnailUrl(project.thumbnail_path) : '';
+  const videoMatch = String(project.video_url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{11})/);
+  const fallbackImage = videoMatch ? 'https://img.youtube.com/vi/' + videoMatch[1] + '/maxresdefault.jpg' : '';
+  const chosenImage = imageUrl || fallbackImage;
+  const update = () => {
+    backdrop.style.backgroundImage = chosenImage ? 'linear-gradient(90deg, rgba(5,9,17,.88), rgba(5,9,17,.28)), url("' + chosenImage.replace(/"/g, '%22') + '")' : 'linear-gradient(120deg, #101a2d, #243b5c)';
+    document.getElementById('featuredTitle').textContent = project.project_title || 'Featured student project';
+    document.getElementById('featuredDescription').textContent = project.project_description || 'Watch this faculty-approved student demonstration.';
+    document.getElementById('featuredCounter').textContent = 'FEATURED PROJECT ' + String(index + 1).padStart(2, '0') + ' / ' + String(homeFeaturedProjects.length).padStart(2, '0');
+    stage.href = project.video_url || 'projects.html';
+    stage.target = project.video_url ? '_blank' : '_self';
+    stage.rel = project.video_url ? 'noopener noreferrer' : '';
+    stage.setAttribute('aria-label', 'Watch ' + (project.project_title || 'featured project'));
+  };
+  if (!animate) { update(); return; }
+  stage.classList.add('is-sliding-out'); copy.classList.add('is-copy-out');
+  window.setTimeout(() => {
+    backdrop.classList.add('is-entering'); update();
+    stage.classList.remove('is-sliding-out'); stage.classList.add('is-sliding-in');
+    copy.classList.remove('is-copy-out'); copy.classList.add('is-copy-in');
+    window.setTimeout(() => { stage.classList.remove('is-sliding-in'); backdrop.classList.remove('is-entering'); copy.classList.remove('is-copy-in'); }, 850);
+  }, 420);
+}
+
+async function loadHomeFeaturedProjects() {
+  const stage = document.getElementById('featuredStage');
+  if (!stage) return;
+  try {
+    const { data, error } = await supabase.rpc('get_homepage_featured_projects');
+    if (error) throw error;
+    homeFeaturedProjects = (data || []).filter((p) => p.thumbnail_path || p.video_url);
+    if (!homeFeaturedProjects.length) {
+      document.getElementById('featuredTitle').textContent = 'Your project could be featured here.';
+      document.getElementById('featuredDescription').textContent = 'Submit your project video and a JPG or PNG thumbnail. Once faculty approves it, it can appear in this rotating showcase.';
+      document.getElementById('featuredCounter').textContent = 'DUET STUDENT SHOWCASE';
+      stage.href = 'projects.html'; return;
+    }
+    homeFeaturedIndex = 0; renderFeaturedProject(0, false);
+    if (homeFeaturedInterval) clearInterval(homeFeaturedInterval);
+    if (homeFeaturedProjects.length > 1) homeFeaturedInterval = setInterval(() => {
+      homeFeaturedIndex = (homeFeaturedIndex + 1) % homeFeaturedProjects.length;
+      renderFeaturedProject(homeFeaturedIndex, true);
+    }, 10000);
+  } catch (error) {
+    console.warn('Could not load homepage featured projects:', error);
+    document.getElementById('featuredTitle').textContent = 'Student projects. Big-screen ideas.';
+    document.getElementById('featuredDescription').textContent = 'Explore faculty-approved demonstrations created by DUET students.';
+  }
+}
+
+function formatHomeCountdown(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(total / 86400), hours = Math.floor((total % 86400) / 3600), minutes = Math.floor((total % 3600) / 60), seconds = total % 60;
+  return days > 0 ? days + 'd ' + String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0') : String(hours).padStart(2,'0') + ':' + String(minutes).padStart(2,'0') + ':' + String(seconds).padStart(2,'0');
+}
+
+function updateHomeVotingClock() {
+  const timer = document.getElementById('homeVotingTimer'), status = document.getElementById('votingHeroStatus'), message = document.getElementById('homeVotingMessage'), deadlineLabel = document.getElementById('homeVotingDeadline'), voteButton = document.getElementById('homeVoteNow');
+  if (!timer || !status || !message || !voteButton) return;
+  const remaining = homeVotingDeadline ? homeVotingDeadline.getTime() - Date.now() : 0;
+  const active = homeVotingIsOpen && homeVotingDeadline && remaining > 0;
+  status.textContent = active ? 'Voting is open' : 'Voting is closed';
+  status.classList.toggle('is-live', !!active);
+  timer.textContent = active ? formatHomeCountdown(remaining) : '00:00:00';
+  message.textContent = active ? 'Cast your single verified vote before the countdown ends.' : 'The official countdown will begin here when faculty opens voting.';
+  deadlineLabel.textContent = homeVotingDeadline ? 'Closes ' + homeVotingDeadline.toLocaleString([], { dateStyle:'medium', timeStyle:'short' }) : 'Voting not started';
+  voteButton.disabled = !active; voteButton.textContent = active ? 'Vote Now ↗' : 'Voting Closed';
+}
+
+async function loadHomeVotingStatus() {
+  try {
+    const { data, error } = await supabase.from('competition_settings').select('voting_open,voting_deadline').eq('id', true).maybeSingle();
+    if (error) throw error;
+    homeVotingIsOpen = !!data?.voting_open;
+    homeVotingDeadline = data?.voting_deadline ? new Date(data.voting_deadline) : null;
+    if (homeVotingInterval) clearInterval(homeVotingInterval);
+    updateHomeVotingClock(); homeVotingInterval = setInterval(updateHomeVotingClock, 1000);
+  } catch (error) {
+    console.warn('Could not load homepage voting status:', error);
+    const msg = document.getElementById('homeVotingMessage');
+    if (msg) msg.textContent = 'Voting schedule is currently unavailable.';
+  }
+}
+
+document.getElementById('homeVoteNow')?.addEventListener('click', () => {
+  if (!homeVotingIsOpen || !homeVotingDeadline || homeVotingDeadline.getTime() <= Date.now()) return;
+  if (activeUser && currentArenaRole === 'voter') voterDashboard?.scrollIntoView({ behavior:'smooth' });
+  else roleChooser?.scrollIntoView({ behavior:'smooth' });
+});
+
+if (document.getElementById('featuredStage')) {
+  loadHomeFeaturedProjects(); loadHomeVotingStatus(); setInterval(loadHomeVotingStatus, 30000);
+}

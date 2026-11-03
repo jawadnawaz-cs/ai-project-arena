@@ -36,67 +36,38 @@
   </header>
 
   <main>
-    <!-- HERO: FEATURED PROJECT SLIDESHOW + LIVE VOTING TIMER -->
-    <section class="hero-stage" id="about" aria-label="Featured student project">
-      <div class="hero-slides" id="heroSlides" aria-hidden="true"></div>
-      <div class="hero-shade" aria-hidden="true"></div>
-
-      <div class="wrap hero-grid">
-        <div class="hero-copy" id="heroCopy">
-          <div class="hero-kicker" id="heroKicker">Featured Entry</div>
-          <h1 class="hero-title" id="heroTitle">Loading featured project…</h1>
-          <p class="hero-desc" id="heroDesc">Approved student demonstrations will appear here.</p>
-          <div class="hero-cta-row">
-            <button class="btn primary hero-watch" id="heroWatchBtn" type="button">
-              <span aria-hidden="true">▶</span> Watch Now
-            </button>
-          </div>
+    <!-- FEATURED PROJECT HERO -->
+    <section class="wrap hero arena-hero" id="about">
+      <a class="featured-stage" id="featuredStage" href="projects.html" aria-label="Watch featured project">
+        <div class="featured-backdrop" id="featuredBackdrop"></div>
+        <div class="featured-shade"></div>
+        <div class="featured-copy" id="featuredCopy">
+          <div class="eyebrow"><span class="live-dot"></span> DUET · FEATURED STUDENT FILM</div>
+          <h1 id="featuredTitle">Student projects. Big-screen ideas.</h1>
+          <p class="lead" id="featuredDescription">Explore faculty-approved demonstrations created by DUET students.</p>
+          <span class="btn primary featured-watch" id="featuredWatch">Watch Now <span aria-hidden="true">↗</span></span>
+          <span class="featured-counter" id="featuredCounter">FEATURED PROJECTS</span>
         </div>
+        <div class="featured-arrows" aria-hidden="true"><span>←</span><span>→</span></div>
+      </a>
 
-        <aside class="hero-vote" id="heroVoteCard" data-state="loading" aria-label="Voting status">
-          <div class="hero-vote-head">
-            <span class="hero-vote-label"><i class="live-dot" aria-hidden="true"></i><span id="heroVoteLabel">Checking voting</span></span>
-            <span class="showcase-badge" id="heroCompetitionBadge">Academic Session 2026</span>
-          </div>
-          <div class="hero-countdown" id="heroCountdown" role="timer" aria-live="off">
-            <div><b id="cdDays">--</b><span>Days</span></div>
-            <div><b id="cdHours">--</b><span>Hours</span></div>
-            <div><b id="cdMins">--</b><span>Mins</span></div>
-            <div><b id="cdSecs">--</b><span>Secs</span></div>
-          </div>
-          <p class="hero-vote-note" id="heroVoteNote">Checking the voting window…</p>
-          <button class="btn primary hero-vote-btn" id="heroVoteBtn" type="button" data-auth="signin" data-role="voter" disabled>Vote Now</button>
-          <a class="hero-vote-link" href="projects.html">Explore the showcase →</a>
-        </aside>
-      </div>
-
-      <div class="hero-controls" id="heroControls" hidden>
-        <div class="wrap hero-controls-inner">
-          <button class="hero-nav-btn" id="heroPrev" type="button" aria-label="Previous project">‹</button>
-          <span class="hero-counter" id="heroCounter">01 / 01</span>
-          <button class="hero-nav-btn" id="heroNext" type="button" aria-label="Next project">›</button>
+      <aside class="voting-hero-panel">
+        <div class="voting-panel-top">
+          <span class="showcase-label">LIVE VOTING</span>
+          <span class="showcase-badge" id="votingHeroStatus">Checking status…</span>
         </div>
-      </div>
-      <div class="hero-progress" id="heroProgress" hidden aria-hidden="true"><i></i></div>
+        <div class="voting-clock-icon" aria-hidden="true">◷</div>
+        <p class="voting-kicker">TIME REMAINING</p>
+        <div class="voting-timer" id="homeVotingTimer" aria-live="polite">--:--:--</div>
+        <p class="voting-panel-note" id="homeVotingMessage">The official voting countdown will appear here when the faculty opens voting.</p>
+        <div class="voting-panel-divider"></div>
+        <div class="voting-panel-foot">
+          <span>One student · One vote</span>
+          <span id="homeVotingDeadline">Voting not started</span>
+        </div>
+        <button class="btn primary voting-now-btn" id="homeVoteNow" type="button">Vote Now ↗</button>
+      </aside>
     </section>
-
-    <!-- FEATURED VIDEO PLAYER -->
-    <div class="hero-player" id="heroPlayer" hidden>
-      <div class="hero-player-backdrop" data-player-close></div>
-      <div class="hero-player-dialog" role="dialog" aria-modal="true" aria-labelledby="heroPlayerTitle">
-        <button class="hero-player-close" type="button" data-player-close aria-label="Close video">×</button>
-        <div class="hero-player-frame" id="heroPlayerFrame"></div>
-        <div class="hero-player-info">
-          <div class="eyebrow" id="heroPlayerTeam"></div>
-          <h3 id="heroPlayerTitle"></h3>
-          <p id="heroPlayerDesc"></p>
-          <div class="hero-player-actions">
-            <button class="btn primary" id="heroPlayerVote" type="button" data-auth="signin" data-role="voter" disabled>Vote Now</button>
-            <a class="btn" href="projects.html">Open Showcase</a>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- ROLE CHOOSER -->
     <section class="role-chooser" id="roleChooser">
@@ -567,6 +538,5 @@
   <script type="module" src="app.js"></script>
   <script type="module" src="auth.js"></script>
   <script type="module" src="admin-access.js"></script>
-  <script type="module" src="hero.js"></script>
 </body>
 </html>
