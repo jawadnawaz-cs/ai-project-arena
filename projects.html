@@ -127,6 +127,64 @@
       }
     }
 
+    function getYoutubeVideoId(raw) {
+      try {
+        const u = new URL(raw);
+        const host = u.hostname.toLowerCase().replace(/^www\./, '');
+        if (!['youtube.com', 'm.youtube.com', 'youtu.be'].includes(host)) return '';
+        let id = '';
+        if (host === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] || '';
+        else if (u.pathname === '/watch') id = u.searchParams.get('v') || '';
+        else {
+          const parts = u.pathname.split('/').filter(Boolean);
+          if (['embed', 'shorts', 'live', 'v'].includes(parts[0])) id = parts[1] || '';
+        }
+        return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
+      } catch {
+        return '';
+      }
+    }
+
+    function resolveThumbnailUrl(path) {
+      if (!path) return '';
+      if (/^(https?:|data:image\/)/i.test(path)) return path;
+      const { data } = supabase.storage.from('project-thumbnails').getPublicUrl(path);
+      return data?.publicUrl || '';
+    }
+
+    function buildYoutubePlayerHtml(rawUrl, thumbnailPath, titleText) {
+      const embedUrl = getYoutubeEmbedUrl(rawUrl || '');
+      if (!embedUrl) return '';
+      const videoId = getYoutubeVideoId(rawUrl || '');
+      const coverImg = resolveThumbnailUrl(thumbnailPath) || (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '');
+      const autoplayUrl = `${embedUrl}?autoplay=1&rel=0`;
+      const safeTitle = escapeHtml(titleText || 'Project video');
+      if (!coverImg) {
+        return `<div class="yt-cover-player is-playing"><iframe src="${escapeHtml(embedUrl)}" title="${safeTitle}" loading="lazy" allowfullscreen></iframe></div>`;
+      }
+      return `
+        <div class="yt-cover-player" data-yt-embed="${escapeHtml(autoplayUrl)}" data-yt-title="${safeTitle}">
+          <img class="yt-cover-img" src="${escapeHtml(coverImg)}" alt="${safeTitle} thumbnail" loading="lazy">
+          <button type="button" class="yt-play-btn" aria-label="Play ${safeTitle}">
+            <svg class="yt-play-svg" viewBox="0 0 68 48" aria-hidden="true">
+              <path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.63 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="#ff0000"/>
+              <path d="M45 24 27 14v20" fill="#ffffff"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    }
+
+    document.addEventListener('click', (e) => {
+      const ytCover = e.target.closest('.yt-cover-player:not(.is-playing)');
+      if (ytCover && ytCover.dataset.ytEmbed) {
+        const src = ytCover.dataset.ytEmbed;
+        const title = ytCover.dataset.ytTitle || 'Project video';
+        ytCover.classList.add('is-playing');
+        ytCover.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+      }
+    });
+
     function renderGrid() {
       const q = (searchInput?.value || '').trim().toLowerCase();
       const filtered = allProjects.filter((p) => {
@@ -140,7 +198,6 @@
         return;
       }
       grid.innerHTML = filtered.map((x) => {
-        const embed = getYoutubeEmbedUrl(x.video_url || '');
         const mems = membersMap.get(x.group_id) || [];
         return `
           <article class="voter-card">
@@ -151,7 +208,7 @@
               <strong>Team Roster</strong>
               ${mems.map((m) => `<div>${escapeHtml(m.member_name)} · <span style="font-family:var(--mono)">${escapeHtml(m.roll_number)}</span></div>`).join('') || '<span>Verified university group</span>'}
             </div>
-            ${embed ? `<iframe src="${escapeHtml(embed)}" title="${escapeHtml(x.project_title)}" loading="lazy" allowfullscreen></iframe>` : ''}
+            ${buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.project_title)}
             <div class="voter-card-footer">
               <span class="dash-status approved">Approved Entry</span>
               <a class="btn sm primary" href="index.html">Vote in Workspace →</a>

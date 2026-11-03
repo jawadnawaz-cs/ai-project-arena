@@ -163,12 +163,96 @@ function getYoutubeEmbedUrl(raw) {
   }
 }
 
+function getYoutubeVideoId(raw) {
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.toLowerCase().replace(/^www\./, '');
+    if (!['youtube.com', 'm.youtube.com', 'youtu.be'].includes(host)) return '';
+    let id = '';
+    if (host === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] || '';
+    else if (u.pathname === '/watch') id = u.searchParams.get('v') || '';
+    else {
+      const parts = u.pathname.split('/').filter(Boolean);
+      if (['embed', 'shorts', 'live', 'v'].includes(parts[0])) id = parts[1] || '';
+    }
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
+  } catch {
+    return '';
+  }
+}
+
+function buildYoutubePlayerHtml(rawUrl, thumbnailPath, titleText, extraClass = '') {
+  const embedUrl = getYoutubeEmbedUrl(rawUrl || '');
+  if (!embedUrl) {
+    return rawUrl
+      ? '<p class="dash-help"><a href="' +
+          escapeHtml(rawUrl) +
+          '" target="_blank" rel="noopener">Open submitted video ↗</a></p>'
+      : '';
+  }
+  const videoId = getYoutubeVideoId(rawUrl || '');
+  const customThumb = thumbnailPath ? resolveThumbnailUrl(thumbnailPath) : '';
+  const coverImg = customThumb || (videoId ? 'https://i.ytimg.com/vi/' + videoId + '/hqdefault.jpg' : '');
+  const autoplayUrl = embedUrl + '?autoplay=1&rel=0';
+  const safeTitle = escapeHtml(titleText || 'Project video');
+
+  if (!coverImg) {
+    return (
+      '<div class="yt-cover-player is-playing ' +
+      escapeHtml(extraClass) +
+      '"><iframe src="' +
+      escapeHtml(embedUrl) +
+      '" title="' +
+      safeTitle +
+      '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'
+    );
+  }
+
+  return (
+    '<div class="yt-cover-player ' +
+    escapeHtml(extraClass) +
+    '" data-yt-embed="' +
+    escapeHtml(autoplayUrl) +
+    '" data-yt-title="' +
+    safeTitle +
+    '">' +
+    '<img class="yt-cover-img" src="' +
+    escapeHtml(coverImg) +
+    '" alt="' +
+    safeTitle +
+    ' thumbnail" loading="lazy">' +
+    '<button type="button" class="yt-play-btn" aria-label="Play ' +
+    safeTitle +
+    '">' +
+    '<svg class="yt-play-svg" viewBox="0 0 68 48" aria-hidden="true">' +
+    '<path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.63 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="#ff0000"/>' +
+    '<path d="M45 24 27 14v20" fill="#ffffff"/>' +
+    '</svg>' +
+    '</button>' +
+    '</div>'
+  );
+}
+
 /* ==========================================================================
    AUTH STATE ROUTING & HEADER PROFILE ICON MENU
    ========================================================================== */
 
-// Close profile menu when clicking outside
+// Close profile menu when clicking outside + handle YouTube thumbnail cover play
 document.addEventListener('click', (e) => {
+  const ytCover = e.target.closest('.yt-cover-player:not(.is-playing)');
+  if (ytCover && ytCover.dataset.ytEmbed) {
+    const src = ytCover.dataset.ytEmbed;
+    const title = ytCover.dataset.ytTitle || 'Project video';
+    ytCover.classList.add('is-playing');
+    ytCover.innerHTML =
+      '<iframe src="' +
+      escapeHtml(src) +
+      '" title="' +
+      escapeHtml(title) +
+      '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+    return;
+  }
+
   const menu = document.querySelector('.profile-menu-wrap.open');
   if (menu && !menu.contains(e.target)) {
     menu.classList.remove('open');
@@ -277,13 +361,11 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
         document.body.classList.add('authenticated-view');
         if (role === 'team') {
-          voterDashboard?.classList.remove('visible');
           await loadDashboard(session.user);
-          dashboard?.scrollIntoView({ behavior: 'auto' });
+          await loadVoterDashboard(session.user, { keepTeamView: true });
         } else if (role === 'voter') {
           dashboard?.classList.remove('visible');
           await loadVoterDashboard(session.user);
-          voterDashboard?.scrollIntoView({ behavior: 'auto' });
         }
       } catch (err) {
         console.error('Arena role routing failed', err);
@@ -451,18 +533,15 @@ async function renderGroupCard(group) {
     '<div class="dash-message" role="status"></div>' +
     '</form>';
 
-  const embedUrl = displaySub && displaySub.video_url ? getYoutubeEmbedUrl(displaySub.video_url) : null;
-  const video = embedUrl
-    ? '<div class="youtube-player"><iframe src="' +
-      escapeHtml(embedUrl) +
-      '" title="' +
-      escapeHtml(displaySub.title) +
-      ' video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'
-    : displaySub && displaySub.video_url
-    ? '<p class="dash-help"><a href="' +
-      escapeHtml(displaySub.video_url) +
-      '" target="_blank" rel="noopener">Open submitted video ↗</a></p>'
-    : '';
+  const video =
+    displaySub && displaySub.video_url
+      ? buildYoutubePlayerHtml(
+          displaySub.video_url,
+          displaySub.thumbnail_path,
+          displaySub.title,
+          'youtube-player'
+        )
+      : '';
 
   return {
     hasSubmission: Boolean(displaySub),
@@ -488,9 +567,6 @@ async function renderGroupCard(group) {
       '</div>' +
       '<div class="dash-message" role="status"></div>' +
       '</div>' +
-      (displaySub && displaySub.thumbnail_path
-        ? '<img class="project-thumbnail team-submission-thumbnail" src="' + escapeHtml(resolveThumbnailUrl(displaySub.thumbnail_path)) + '" alt="' + escapeHtml(displaySub.title) + ' thumbnail" loading="lazy">'
-        : '') +
       (displaySub
         ? '<div style="font-size:14px;margin-top:10px"><strong>' +
           escapeHtml(displaySub.title) +
@@ -632,7 +708,6 @@ function renderVoterProjects() {
 
   list.innerHTML = filtered
     .map((x) => {
-      const embed = getYoutubeEmbedUrl(x.video_url || '');
       const members = cachedVoterMembersByGroup.get(x.group_id) || [];
       return (
         '<article class="voter-card" data-vote-submission="' +
@@ -641,7 +716,6 @@ function renderVoterProjects() {
         '<div class="eyebrow">' +
         escapeHtml(x.team_name || 'Student Team') +
         '</div>' +
-        (x.thumbnail_path ? '<img class="project-thumbnail" src="' + escapeHtml(resolveThumbnailUrl(x.thumbnail_path)) + '" alt="' + escapeHtml(x.project_title) + ' thumbnail" loading="lazy">' : '') +
         '<h3>' +
         escapeHtml(x.project_title) +
         '</h3>' +
@@ -660,13 +734,7 @@ function renderVoterProjects() {
           )
           .join('') || '<span>Roster verified by faculty</span>') +
         '</div>' +
-        (embed
-          ? '<iframe src="' +
-            escapeHtml(embed) +
-            '" title="' +
-            escapeHtml(x.project_title) +
-            ' video" loading="lazy" allowfullscreen></iframe>'
-          : '') +
+        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.project_title) +
         '<div class="voter-card-footer">' +
         '<span style="font-size:12px;color:var(--muted)">Verified Entry</span>' +
         '<button class="btn primary" type="button" data-cast-vote ' +
@@ -687,12 +755,14 @@ function renderVoterProjects() {
 
 document.getElementById('voterSearchInput')?.addEventListener('input', renderVoterProjects);
 
-async function loadVoterDashboard(user) {
+async function loadVoterDashboard(user, opts = {}) {
   if (!user || !voterDashboard) return;
   activeUser = user;
-  currentArenaRole = 'voter';
+  if (!opts.keepTeamView) {
+    currentArenaRole = 'voter';
+    dashboard?.classList.remove('visible');
+  }
   voterDashboard.classList.add('visible');
-  dashboard?.classList.remove('visible');
   document.body.classList.add('authenticated-view');
 
   const profile = await supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
@@ -1321,11 +1391,7 @@ function renderAdminQueue() {
           )
           .join('') || '<span>No members listed</span>') +
         '</div>' +
-        (embed
-          ? '<iframe class="admin-video" src="' +
-            escapeHtml(embed) +
-            '" title="Project demo" loading="lazy" allowfullscreen></iframe>'
-          : '') +
+        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.title, 'admin-video') +
         '<label class="dash-field">Reviewer Feedback (shared with team)' +
         '<textarea class="admin-feedback" maxlength="2000" placeholder="Optional feedback or required revisions">' +
         escapeHtml(x.admin_feedback || '') +
@@ -1398,17 +1464,7 @@ function renderRejectedGallery() {
         '</div>' +
         '<span class="dash-status rejected">Rejected</span>' +
         '</div>' +
-        (embed
-          ? '<iframe class="admin-video rejected-video-frame" src="' +
-            escapeHtml(embed) +
-            '" title="' +
-            escapeHtml(x.title) +
-            '" loading="lazy" allowfullscreen></iframe>'
-          : x.video_url
-          ? '<p class="dash-help"><a href="' +
-            escapeHtml(x.video_url) +
-            '" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline">Open Video Link ↗</a></p>'
-          : '') +
+        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.title, 'admin-video rejected-video-frame') +
         '<p class="rejected-desc">' +
         escapeHtml(x.description) +
         '</p>' +
@@ -1451,7 +1507,7 @@ async function loadAdminDashboard() {
     supabase.from('competition_settings').select('*').eq('id', true).single(),
     supabase
       .from('project_submissions')
-      .select('id,group_id,title,description,video_url,status,admin_feedback,submitted_at')
+      .select('id,group_id,title,description,video_url,thumbnail_path,status,admin_feedback,submitted_at')
       .order('submitted_at', { ascending: false }),
     supabase.from('project_groups').select('id,name'),
     supabase.from('group_members').select('group_id,member_name,roll_number').order('created_at'),
@@ -1803,7 +1859,7 @@ function renderFeaturedProject(index, animate = true) {
   const fallbackImage = videoMatch ? 'https://img.youtube.com/vi/' + videoMatch[1] + '/maxresdefault.jpg' : '';
   const chosenImage = imageUrl || fallbackImage;
   const update = () => {
-    backdrop.style.backgroundImage = chosenImage ? 'linear-gradient(90deg, rgba(5,9,17,.88), rgba(5,9,17,.28)), url("' + chosenImage.replace(/"/g, '%22') + '")' : 'linear-gradient(120deg, #101a2d, #243b5c)';
+    backdrop.style.backgroundImage = chosenImage ? 'url("' + chosenImage.replace(/"/g, '%22') + '")' : 'linear-gradient(120deg, #101a2d, #243b5c)';
     document.getElementById('featuredTitle').textContent = project.project_title || 'Featured student project';
     document.getElementById('featuredDescription').textContent = project.project_description || 'Watch this faculty-approved student demonstration.';
     document.getElementById('featuredCounter').textContent = 'FEATURED PROJECT ' + String(index + 1).padStart(2, '0') + ' / ' + String(homeFeaturedProjects.length).padStart(2, '0');
@@ -1884,7 +1940,7 @@ async function loadHomeVotingStatus() {
 
 document.getElementById('homeVoteNow')?.addEventListener('click', () => {
   if (!homeVotingIsOpen || !homeVotingDeadline || homeVotingDeadline.getTime() <= Date.now()) return;
-  if (activeUser && currentArenaRole === 'voter') voterDashboard?.scrollIntoView({ behavior:'smooth' });
+  if (activeUser) voterDashboard?.scrollIntoView({ behavior:'smooth' });
   else roleChooser?.scrollIntoView({ behavior:'smooth' });
 });
 
