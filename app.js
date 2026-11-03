@@ -314,7 +314,7 @@ async function renderGroupCard(group) {
       .order('created_at'),
     supabase
       .from('project_submissions')
-      .select('id,title,description,video_url,video_path,status,admin_feedback,updated_at')
+      .select('id,title,description,video_url,video_path,thumbnail_path,status,admin_feedback,updated_at')
       .eq('group_id', group.id)
       .maybeSingle(),
   ]);
@@ -373,6 +373,10 @@ async function renderGroupCard(group) {
     '<label class="dash-field">YouTube Demonstration Link<input name="videoUrl" type="url" required value="' +
     escapeHtml(sub && sub.video_url ? sub.video_url : '') +
     '" placeholder="https://www.youtube.com/watch?v=…"></label>' +
+    '<label class="dash-field">Video Thumbnail (PNG or JPG)<input name="thumbnailFile" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg"></label>' +
+    '<p class="youtube-link-note">Upload one JPG or PNG image (maximum 5 MB). This image will be used as your project video thumbnail and as the background image in the homepage featured-project area. ' +
+    (sub && sub.thumbnail_path ? 'A thumbnail is already attached. Choose a new file only if you want to replace it.' : 'A thumbnail is optional, but recommended.') +
+    '</p>' +
     '<p class="youtube-link-note">Supports standard YouTube watch links, youtu.be share links, or YouTube Shorts. ' +
     (draftMode
       ? 'Submissions are currently closed, so changes will be saved privately as a draft.'
@@ -570,6 +574,7 @@ function renderVoterProjects() {
         '<div class="eyebrow">' +
         escapeHtml(x.team_name || 'Student Team') +
         '</div>' +
+        (x.thumbnail_path ? '<img class="project-thumbnail" src="' + escapeHtml(supabase.storage.from('project-thumbnails').getPublicUrl(x.thumbnail_path).data.publicUrl) + '" alt="' + escapeHtml(x.project_title) + ' thumbnail" loading="lazy">' : '') +
         '<h3>' +
         escapeHtml(x.project_title) +
         '</h3>' +
@@ -855,6 +860,7 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
     const title = String(fd.get('title') || '').trim();
     const description = String(fd.get('description') || '').trim();
     const videoUrl = String(fd.get('videoUrl') || '').trim();
+    const thumbnailFile = fd.get('thumbnailFile');
 
     if (!title || !description) throw new Error('Enter a project title and technical description.');
     if (!videoUrl) throw new Error('Paste your YouTube demonstration link.');
@@ -862,11 +868,27 @@ document.getElementById('groupList')?.addEventListener('submit', async (e) => {
       throw new Error('Enter a valid YouTube link (watch, youtu.be, or Shorts).');
     }
 
+    let thumbnailPath = form.dataset.currentThumbnail || null;
+    if (thumbnailFile && thumbnailFile.size > 0) {
+      const allowedTypes = ['image/jpeg', 'image/png'];
+      const extension = thumbnailFile.name.split('.').pop().toLowerCase();
+      if (!allowedTypes.includes(thumbnailFile.type) || !['jpg', 'jpeg', 'png'].includes(extension)) {
+        throw new Error('Thumbnail must be a JPG or PNG image.');
+      }
+      if (thumbnailFile.size > 5 * 1024 * 1024) throw new Error('Thumbnail must be 5 MB or smaller.');
+      const filePath = `${groupId}/${activeUser.id}/${crypto.randomUUID()}.${extension === 'jpeg' ? 'jpg' : extension}`;
+      const upload = await supabase.storage.from('project-thumbnails').upload(filePath, thumbnailFile, { contentType: thumbnailFile.type, upsert: false });
+      if (upload.error) throw upload.error;
+      thumbnailPath = upload.data.path;
+    }
+
     const payload = {
       title,
       description,
       video_url: videoUrl,
       video_path: null,
+      thumbnail_path: thumbnailPath,
+      thumbnail_path: sub && sub.thumbnail_path ? sub.thumbnail_path : null,
       status:
         submissionId && form.dataset.currentStatus === 'approved'
           ? 'pending'
