@@ -181,7 +181,7 @@ function getYoutubeVideoId(raw) {
   }
 }
 
-function buildYoutubePlayerHtml(rawUrl, thumbnailPath, titleText, extraClass = '') {
+function buildYoutubePlayerHtml(rawUrl, thumbnailPath, titleText, extraClass = '', submissionId = '') {
   const embedUrl = getYoutubeEmbedUrl(rawUrl || '');
   if (!embedUrl) {
     return rawUrl
@@ -195,11 +195,14 @@ function buildYoutubePlayerHtml(rawUrl, thumbnailPath, titleText, extraClass = '
   const coverImg = customThumb || (videoId ? 'https://i.ytimg.com/vi/' + videoId + '/hqdefault.jpg' : '');
   const autoplayUrl = embedUrl + '?autoplay=1&rel=0';
   const safeTitle = escapeHtml(titleText || 'Project video');
+  const safeSubId = escapeHtml(submissionId || '');
 
   if (!coverImg) {
     return (
       '<div class="yt-cover-player is-playing ' +
       escapeHtml(extraClass) +
+      '" data-submission-id="' +
+      safeSubId +
       '"><iframe src="' +
       escapeHtml(embedUrl) +
       '" title="' +
@@ -211,6 +214,8 @@ function buildYoutubePlayerHtml(rawUrl, thumbnailPath, titleText, extraClass = '
   return (
     '<div class="yt-cover-player ' +
     escapeHtml(extraClass) +
+    '" data-submission-id="' +
+    safeSubId +
     '" data-yt-embed="' +
     escapeHtml(autoplayUrl) +
     '" data-yt-title="' +
@@ -234,6 +239,235 @@ function buildYoutubePlayerHtml(rawUrl, thumbnailPath, titleText, extraClass = '
 }
 
 /* ==========================================================================
+   ENGAGEMENT ENGINE: 3-CATEGORY 5-STAR RATINGS, 3-RANK VOTING, COMMENTS &
+   PER-USER VIDEO WATCH TIME / AUDIENCE ATTENTION ANALYTICS
+   ========================================================================== */
+
+const ENGAGEMENT_STORAGE_KEY = 'duetflix_engagement_state_v1';
+const ENGAGEMENT_CLOUD_PATH = 'duetflix-meta/engagement_v1.json';
+
+function createEmptyEngagementState() {
+  return {
+    ratingsBySub: {},
+    ranksByUser: {},
+    commentsBySub: {},
+    watchBySub: {},
+  };
+}
+
+function getLocalEngagementState() {
+  try {
+    const raw = localStorage.getItem(ENGAGEMENT_STORAGE_KEY);
+    if (!raw) return createEmptyEngagementState();
+    const parsed = JSON.parse(raw);
+    return {
+      ratingsBySub: parsed?.ratingsBySub || {},
+      ranksByUser: parsed?.ranksByUser || {},
+      commentsBySub: parsed?.commentsBySub || {},
+      watchBySub: parsed?.watchBySub || {},
+    };
+  } catch {
+    return createEmptyEngagementState();
+  }
+}
+
+function mergeEngagementStates(base, incoming) {
+  const out = createEmptyEngagementState();
+  const a = base || createEmptyEngagementState();
+  const b = incoming || createEmptyEngagementState();
+
+  // Merge ratingsBySub
+  const subKeys = new Set([...Object.keys(a.ratingsBySub || {}), ...Object.keys(b.ratingsBySub || {})]);
+  subKeys.forEach((subId) => {
+    out.ratingsBySub[subId] = { ...(a.ratingsBySub?.[subId] || {}) };
+    Object.entries(b.ratingsBySub?.[subId] || {}).forEach(([uid, rec]) => {
+      const existing = out.ratingsBySub[subId][uid];
+      if (!existing || new Date(rec.updatedAt || 0) >= new Date(existing.updatedAt || 0)) {
+        out.ratingsBySub[subId][uid] = rec;
+      }
+    });
+  });
+
+  // Merge ranksByUser
+  const userKeys = new Set([...Object.keys(a.ranksByUser || {}), ...Object.keys(b.ranksByUser || {})]);
+  userKeys.forEach((uid) => {
+    const ra = a.ranksByUser?.[uid];
+    const rb = b.ranksByUser?.[uid];
+    if (!ra) out.ranksByUser[uid] = rb;
+    else if (!rb) out.ranksByUser[uid] = ra;
+    else {
+      out.ranksByUser[uid] =
+        new Date(rb.updatedAt || 0) >= new Date(ra.updatedAt || 0) ? rb : ra;
+    }
+  });
+
+  // Merge commentsBySub (respecting deletedIds)
+  const commentSubKeys = new Set([...Object.keys(a.commentsBySub || {}), ...Object.keys(b.commentsBySub || {})]);
+  commentSubKeys.forEach((subId) => {
+    const map = new Map();
+    [...(a.commentsBySub?.[subId] || []), ...(b.commentsBySub?.[subId] || [])].forEach((c) => {
+      if (!c || !c.id) return;
+      const prev = map.get(c.id);
+      if (!prev || (c.deleted && !prev.deleted)) {
+        map.set(c.id, c);
+      }
+    });
+    out.commentsBySub[subId] = [...map.values()].sort(
+      (x, y) => new Date(x.createdAt || 0) - new Date(y.createdAt || 0)
+    );
+  });
+
+  // Merge watchBySub (keep max watchedSeconds per user per video)
+  const watchSubKeys = new Set([...Object.keys(a.watchBySub || {}), ...Object.keys(b.watchBySub || {})]);
+  watchSubKeys.forEach((subId) => {
+    out.watchBySub[subId] = { ...(a.watchBySub?.[subId] || {}) };
+    Object.entries(b.watchBySub?.[subId] || {}).forEach(([uid, rec]) => {
+      const existing = out.watchBySub[subId][uid];
+      if (!existing || Number(rec.watchedSeconds || 0) >= Number(existing.watchedSeconds || 0)) {
+        out.watchBySub[subId][uid] = {
+          ...existing,
+          ...rec,
+          watchedSeconds: Math.max(Number(existing?.watchedSeconds || 0), Number(rec?.watchedSeconds || 0)),
+          attentionPct: Math.max(Number(existing?.attentionPct || 0), Number(rec?.attentionPct || 0)),
+          playCount: Math.max(Number(existing?.playCount || 0), Number(rec?.playCount || 0)),
+        };
+      }
+    });
+  });
+
+  return out;
+}
+
+let engagementState = getLocalEngagementState();
+let cloudSyncTimer = null;
+
+function persistEngagementState(syncCloud = true) {
+  try {
+    localStorage.setItem(ENGAGEMENT_STORAGE_KEY, JSON.stringify(engagementState));
+  } catch (e) {
+    console.warn('Could not save engagement state locally', e);
+  }
+  if (!syncCloud) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = window.setTimeout(async () => {
+    try {
+      const blob = new Blob([JSON.stringify(engagementState)], { type: 'application/json' });
+      await supabase.storage
+        .from('project-thumbnails')
+        .upload(ENGAGEMENT_CLOUD_PATH, blob, { upsert: true, contentType: 'application/json', cacheControl: '0' });
+    } catch {
+      // Ignore if storage RLS restricts cloud sync for current role
+    }
+  }, 600);
+}
+
+async function syncEngagementFromCloud() {
+  try {
+    const pubUrl =
+      supabase.storage.from('project-thumbnails').getPublicUrl(ENGAGEMENT_CLOUD_PATH).data.publicUrl +
+      '?t=' +
+      Date.now();
+    const res = await fetch(pubUrl, { cache: 'no-store' });
+    if (!res.ok) return;
+    const cloudData = await res.json();
+    engagementState = mergeEngagementStates(engagementState, cloudData);
+    persistEngagementState(false);
+  } catch {
+    // Cloud state not created yet or offline
+  }
+}
+
+function getCurrentViewerMeta() {
+  const uid = activeUser?.id || 'guest-viewer';
+  const email = activeUser?.email || 'guest@duetflix.local';
+  const name =
+    activeUser?.user_metadata?.full_name ||
+    (email.includes('@') ? email.split('@')[0] : 'Student Viewer');
+  const role = isArenaAdmin ? 'Admin' : currentArenaRole === 'team' ? 'Team Lead' : 'Voter';
+  return { uid, email, name, role };
+}
+
+const activeWatchTimers = new Map();
+
+function startVideoWatchTracking(submissionId, titleText, playerEl) {
+  const subKey = String(submissionId || titleText || 'unknown');
+  if (!subKey) return;
+  const viewer = getCurrentViewerMeta();
+  if (!engagementState.watchBySub[subKey]) engagementState.watchBySub[subKey] = {};
+  const existing = engagementState.watchBySub[subKey][viewer.uid] || {
+    userId: viewer.uid,
+    userName: viewer.name,
+    userEmail: viewer.email,
+    watchedSeconds: 0,
+    attentionPct: 0,
+    playCount: 0,
+    totalTicks: 0,
+    focusedTicks: 0,
+  };
+
+  existing.userName = viewer.name;
+  existing.userEmail = viewer.email;
+  existing.playCount = Number(existing.playCount || 0) + 1;
+  existing.watchedSeconds = Math.max(Number(existing.watchedSeconds || 0), 4);
+  existing.totalTicks = Number(existing.totalTicks || 0) + 1;
+  existing.focusedTicks = Number(existing.focusedTicks || 0) + 1;
+  existing.attentionPct = Math.min(
+    100,
+    Math.max(Number(existing.attentionPct || 0), 38)
+  );
+  existing.lastWatchedAt = new Date().toISOString();
+  engagementState.watchBySub[subKey][viewer.uid] = existing;
+  persistEngagementState(true);
+  if (isArenaAdmin && typeof renderAdminVideoAnalytics === 'function') {
+    renderAdminVideoAnalytics();
+  }
+
+  if (activeWatchTimers.has(subKey)) {
+    clearInterval(activeWatchTimers.get(subKey));
+  }
+
+  const intervalId = window.setInterval(() => {
+    if (!playerEl || !document.body.contains(playerEl) || !playerEl.classList.contains('is-playing')) {
+      clearInterval(intervalId);
+      activeWatchTimers.delete(subKey);
+      return;
+    }
+    const rect = playerEl.getBoundingClientRect();
+    const inViewport = rect.bottom > 60 && rect.top < window.innerHeight - 60;
+    const isTabVisible = document.visibilityState === 'visible';
+    const rec = engagementState.watchBySub[subKey]?.[viewer.uid];
+    if (!rec) return;
+
+    rec.totalTicks = Number(rec.totalTicks || 1) + 1;
+    if (inViewport && isTabVisible) {
+      rec.focusedTicks = Number(rec.focusedTicks || 1) + 1;
+      rec.watchedSeconds = Number(rec.watchedSeconds || 0) + 3;
+      const focusRatio = Math.min(1, rec.focusedTicks / Math.max(1, rec.totalTicks));
+      const durationFactor = Math.min(1, rec.watchedSeconds / 150); // 2.5 mins benchmark
+      rec.attentionPct = Math.min(
+        100,
+        Math.round((0.35 + 0.65 * durationFactor) * (0.55 + 0.45 * focusRatio) * 100)
+      );
+      rec.lastWatchedAt = new Date().toISOString();
+      persistEngagementState(rec.watchedSeconds % 9 === 0);
+      if (isArenaAdmin && typeof renderAdminVideoAnalytics === 'function') {
+        renderAdminVideoAnalytics();
+      }
+    }
+  }, 3000);
+
+  activeWatchTimers.set(subKey, intervalId);
+}
+
+function formatWatchMinutes(seconds) {
+  const sec = Math.max(0, Math.round(Number(seconds || 0)));
+  const minsDecimal = (sec / 60).toFixed(1);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${minsDecimal} mins (${m}m ${String(s).padStart(2, '0')}s)`;
+}
+
+/* ==========================================================================
    AUTH STATE ROUTING & HEADER PROFILE ICON MENU
    ========================================================================== */
 
@@ -243,6 +477,12 @@ document.addEventListener('click', (e) => {
   if (ytCover && ytCover.dataset.ytEmbed) {
     const src = ytCover.dataset.ytEmbed;
     const title = ytCover.dataset.ytTitle || 'Project video';
+    const card = ytCover.closest('[data-vote-submission], [data-submission-id]');
+    const subId =
+      ytCover.dataset.submissionId ||
+      card?.dataset.voteSubmission ||
+      card?.dataset.submissionId ||
+      title;
     ytCover.classList.add('is-playing');
     ytCover.innerHTML =
       '<iframe src="' +
@@ -250,6 +490,7 @@ document.addEventListener('click', (e) => {
       '" title="' +
       escapeHtml(title) +
       '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+    startVideoWatchTracking(subId, title, ytCover);
     return;
   }
 
@@ -677,14 +918,177 @@ async function loadDashboard(user) {
 }
 
 /* ==========================================================================
-   VOTER WORKSPACE & LIVE SEARCH FILTERING
+   VOTER WORKSPACE, 3-CATEGORY 5-STAR RATINGS, 3-RANK CHOICES & COMMENTS
    ========================================================================== */
+
+const openVoteDrawers = new Set();
+const openCommentDrawers = new Set();
+
+function getProjectEngagementStats(subId) {
+  const key = String(subId || '');
+  const ratingsMap = engagementState.ratingsBySub[key] || {};
+  const ratingEntries = Object.values(ratingsMap);
+  let charSum = 0,
+    charCount = 0;
+  let voiceSum = 0,
+    voiceCount = 0;
+  let storySum = 0,
+    storyCount = 0;
+
+  ratingEntries.forEach((r) => {
+    if (Number(r.character_consistency) > 0) {
+      charSum += Number(r.character_consistency);
+      charCount++;
+    }
+    if (Number(r.voice_over) > 0) {
+      voiceSum += Number(r.voice_over);
+      voiceCount++;
+    }
+    if (Number(r.story) > 0) {
+      storySum += Number(r.story);
+      storyCount++;
+    }
+  });
+
+  const avgChar = charCount ? charSum / charCount : 0;
+  const avgVoice = voiceCount ? voiceSum / voiceCount : 0;
+  const avgStory = storyCount ? storySum / storyCount : 0;
+  const activeAvgs = [avgChar, avgVoice, avgStory].filter((v) => v > 0);
+  const overallAvg = activeAvgs.length
+    ? activeAvgs.reduce((a, b) => a + b, 0) / activeAvgs.length
+    : 0;
+
+  let rank1 = 0,
+    rank2 = 0,
+    rank3 = 0;
+  Object.values(engagementState.ranksByUser || {}).forEach((uRanks) => {
+    if (!uRanks) return;
+    if (String(uRanks['1'] || '') === key) rank1++;
+    if (String(uRanks['2'] || '') === key) rank2++;
+    if (String(uRanks['3'] || '') === key) rank3++;
+  });
+
+  const comments = (engagementState.commentsBySub[key] || []).filter((c) => !c.deleted);
+  const watchMap = engagementState.watchBySub[key] || {};
+  const watchEntries = Object.values(watchMap);
+  const totalViewers = watchEntries.length;
+  const avgWatchSeconds = totalViewers
+    ? watchEntries.reduce((s, w) => s + Number(w.watchedSeconds || 0), 0) / totalViewers
+    : 0;
+  const avgAttentionPct = totalViewers
+    ? Math.round(
+        watchEntries.reduce((s, w) => s + Number(w.attentionPct || 0), 0) / totalViewers
+      )
+    : 0;
+
+  return {
+    ratingCount: ratingEntries.length,
+    avgChar,
+    avgVoice,
+    avgStory,
+    overallAvg,
+    rank1,
+    rank2,
+    rank3,
+    weightedRankPoints: rank1 * 3 + rank2 * 2 + rank3 * 1,
+    comments,
+    watchEntries,
+    totalViewers,
+    avgWatchSeconds,
+    avgAttentionPct,
+  };
+}
+
+function buildFiveStarsRowHtml(categoryKey, categoryLabel, currentVal) {
+  const val = Number(currentVal || 0);
+  let starsHtml = '';
+  for (let i = 1; i <= 5; i++) {
+    const filled = i <= val;
+    starsHtml +=
+      '<button type="button" class="star-pick-btn ' +
+      (filled ? 'is-filled' : '') +
+      '" data-star-cat="' +
+      escapeHtml(categoryKey) +
+      '" data-star-val="' +
+      i +
+      '" aria-label="Rate ' +
+      escapeHtml(categoryLabel) +
+      ' ' +
+      i +
+      ' out of 5 stars">' +
+      (filled ? '★' : '☆') +
+      '</button>';
+  }
+  return (
+    '<div class="star-category-row" data-cat-row="' +
+    escapeHtml(categoryKey) +
+    '">' +
+    '<span class="star-category-label">' +
+    escapeHtml(categoryLabel) +
+    '</span>' +
+    '<div class="star-buttons-group">' +
+    starsHtml +
+    '<span class="star-score-pill" data-cat-score="' +
+    escapeHtml(categoryKey) +
+    '">' +
+    (val ? val + ' / 5' : '0 / 5') +
+    '</span>' +
+    '</div>' +
+    '</div>'
+  );
+}
+
+function renderRankedBallotSummary() {
+  const bar = document.getElementById('voterRankedBallotSummary');
+  if (!bar) return;
+  const viewer = getCurrentViewerMeta();
+  const userRanks = engagementState.ranksByUser[viewer.uid] || {};
+  const titleById = new Map(
+    cachedVoterProjects.map((p) => [String(p.submission_id), p.project_title || 'Project'])
+  );
+
+  const slots = [
+    { rank: '1', icon: '🥇', label: 'Rank #1 (1st Choice)' },
+    { rank: '2', icon: '🥈', label: 'Rank #2 (2nd Choice)' },
+    { rank: '3', icon: '🥉', label: 'Rank #3 (3rd Choice)' },
+  ];
+
+  bar.innerHTML =
+    '<div class="ranked-ballot-head">' +
+    '<strong>Your 3 Voting Rank Choices</strong>' +
+    '<span>Assign Rank #1, #2, and #3 plus 5-star category ratings using the Vote button on any project below.</span>' +
+    '</div>' +
+    '<div class="ranked-ballot-slots">' +
+    slots
+      .map((s) => {
+        const chosenId = userRanks[s.rank] ? String(userRanks[s.rank]) : '';
+        const chosenTitle = chosenId ? titleById.get(chosenId) || 'Selected Project' : '';
+        return (
+          '<div class="ranked-slot-pill ' +
+          (chosenId ? 'is-assigned' : '') +
+          '">' +
+          '<span class="ranked-slot-tag">' +
+          s.icon +
+          ' ' +
+          s.label +
+          '</span>' +
+          '<strong class="ranked-slot-val">' +
+          (chosenTitle ? escapeHtml(chosenTitle) : 'Not selected yet') +
+          '</strong>' +
+          '</div>'
+        );
+      })
+      .join('') +
+    '</div>';
+}
 
 function renderVoterProjects() {
   const list = document.getElementById('voterProjectList');
   const countBadge = document.getElementById('voterCountBadge');
   const searchInput = document.getElementById('voterSearchInput');
   if (!list) return;
+
+  renderRankedBallotSummary();
 
   const query = (searchInput?.value || '').trim().toLowerCase();
   const filtered = cachedVoterProjects.filter((x) => {
@@ -709,15 +1113,125 @@ function renderVoterProjects() {
     return;
   }
 
+  const viewer = getCurrentViewerMeta();
+  const myRanks = engagementState.ranksByUser[viewer.uid] || {};
+  const titleById = new Map(
+    cachedVoterProjects.map((p) => [String(p.submission_id), p.project_title || 'Project'])
+  );
+
   list.innerHTML = filtered
     .map((x) => {
+      const subId = String(x.submission_id);
       const members = cachedVoterMembersByGroup.get(x.group_id) || [];
+      const stats = getProjectEngagementStats(subId);
+      const myRating = engagementState.ratingsBySub[subId]?.[viewer.uid] || {
+        character_consistency: 0,
+        voice_over: 0,
+        story: 0,
+      };
+      const myRankForThis =
+        String(myRanks['1'] || '') === subId
+          ? 1
+          : String(myRanks['2'] || '') === subId
+          ? 2
+          : String(myRanks['3'] || '') === subId
+          ? 3
+          : 0;
+
+      const isVoteOpen = openVoteDrawers.has(subId);
+      const isCommentsOpen = openCommentDrawers.has(subId);
+
+      const rankOptionsHtml = [1, 2, 3]
+        .map((rk) => {
+          const icon = rk === 1 ? '🥇' : rk === 2 ? '🥈' : '🥉';
+          const assignedSubId = myRanks[String(rk)] ? String(myRanks[String(rk)]) : '';
+          const isCurrent = myRankForThis === rk;
+          const otherTitle =
+            assignedSubId && assignedSubId !== subId ? titleById.get(assignedSubId) : '';
+          return (
+            '<button type="button" class="rank-choice-btn ' +
+            (isCurrent ? 'is-selected' : '') +
+            '" data-pick-rank="' +
+            rk +
+            '">' +
+            '<span>' +
+            icon +
+            ' Rank #' +
+            rk +
+            (rk === 1 ? ' (1st Choice)' : rk === 2 ? ' (2nd Choice)' : ' (3rd Choice)') +
+            '</span>' +
+            '<small>' +
+            (isCurrent
+              ? '✓ Assigned to this film'
+              : otherTitle
+              ? 'Currently: ' + escapeHtml(otherTitle)
+              : 'Available slot') +
+            '</small>' +
+            '</button>'
+          );
+        })
+        .join('');
+
+      const commentsListHtml = stats.comments.length
+        ? stats.comments
+            .map((c) => {
+              const canDelete = isArenaAdmin || c.userId === viewer.uid;
+              return (
+                '<div class="video-comment-item" data-comment-id="' +
+                escapeHtml(c.id) +
+                '">' +
+                '<div class="video-comment-top">' +
+                '<div>' +
+                '<strong>' +
+                escapeHtml(c.userName || 'Student') +
+                '</strong> ' +
+                '<span class="comment-role-pill">' +
+                escapeHtml(c.userRole || 'Voter') +
+                '</span>' +
+                '</div>' +
+                '<div class="video-comment-meta">' +
+                '<span>' +
+                escapeHtml(new Date(c.createdAt).toLocaleString()) +
+                '</span>' +
+                (canDelete
+                  ? '<button type="button" class="comment-delete-btn" data-delete-comment="' +
+                    escapeHtml(c.id) +
+                    '" title="Delete comment">🗑 Delete</button>'
+                  : '') +
+                '</div>' +
+                '</div>' +
+                '<p class="video-comment-body">' +
+                escapeHtml(c.text) +
+                '</p>' +
+                '</div>'
+              );
+            })
+            .join('')
+        : '<div class="comments-empty">No comments yet. Be the first to share your thoughts on this film!</div>';
+
       return (
         '<article class="voter-card" data-vote-submission="' +
-        escapeHtml(x.submission_id) +
+        escapeHtml(subId) +
+        '" data-selected-rank="' +
+        myRankForThis +
+        '" data-star-character_consistency="' +
+        Number(myRating.character_consistency || 0) +
+        '" data-star-voice_over="' +
+        Number(myRating.voice_over || 0) +
+        '" data-star-story="' +
+        Number(myRating.story || 0) +
         '">' +
+        '<div class="voter-card-top-row">' +
         '<div class="eyebrow">' +
         escapeHtml(x.team_name || 'Student Team') +
+        '</div>' +
+        (stats.overallAvg > 0
+          ? '<span class="card-avg-star-badge">★ ' +
+            stats.overallAvg.toFixed(1) +
+            ' / 5 (' +
+            stats.ratingCount +
+            ')</span>'
+          : '<span class="card-avg-star-badge is-unrated">☆ Rate this film</span>') +
         '</div>' +
         '<h3>' +
         escapeHtml(x.project_title) +
@@ -737,18 +1251,82 @@ function renderVoterProjects() {
           )
           .join('') || '<span>Roster verified by faculty</span>') +
         '</div>' +
-        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.project_title) +
+        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.project_title, '', subId) +
         '<div class="voter-card-footer">' +
+        '<div class="voter-card-badges">' +
         '<span style="font-size:12px;color:var(--muted)">Verified Entry</span>' +
-        '<button class="btn primary" type="button" data-cast-vote ' +
-        (cachedVoterHasVoted || !cachedVoterVotingOpen ? 'disabled' : '') +
-        '>' +
-        (cachedVoterHasVoted
-          ? '✓ Vote Recorded'
-          : cachedVoterVotingOpen
-          ? 'Cast Official Vote'
-          : 'Voting Closed') +
+        (myRankForThis
+          ? '<span class="my-rank-pill">' +
+            (myRankForThis === 1 ? '🥇' : myRankForThis === 2 ? '🥈' : '🥉') +
+            ' Your Rank #' +
+            myRankForThis +
+            '</span>'
+          : '') +
+        '</div>' +
+        '<div class="voter-card-actions">' +
+        '<button class="btn sm comment-toggle-btn ' +
+        (isCommentsOpen ? 'active' : '') +
+        '" type="button" data-toggle-comments>' +
+        '💬 Comments (' +
+        stats.comments.length +
+        ')' +
         '</button>' +
+        '<button class="btn primary vote-dropdown-toggle-btn" type="button" data-toggle-vote-drawer>' +
+        (myRankForThis
+          ? '✓ Ranked #' + myRankForThis + ' · Rate & Vote ▾'
+          : myRating.character_consistency || myRating.voice_over || myRating.story
+          ? '★ Rated · Choose Rank ▾'
+          : '★ Vote & Rate ▾') +
+        '</button>' +
+        '</div>' +
+        '</div>' +
+        /* DROPDOWN 1: 3-CATEGORY 5-STAR RATING + 3 RANK CHOICES */
+        '<div class="vote-rating-drawer" data-vote-drawer ' +
+        (isVoteOpen ? '' : 'hidden') +
+        '>' +
+        '<div class="drawer-section-head">' +
+        '<strong>1. Rate Film Categories (Click 1 to 5 Stars)</strong>' +
+        '<span>Give up to 5 stars for each category</span>' +
+        '</div>' +
+        '<div class="star-categories-list">' +
+        buildFiveStarsRowHtml(
+          'character_consistency',
+          'Character Consistency',
+          myRating.character_consistency
+        ) +
+        buildFiveStarsRowHtml('voice_over', 'Voice Over', myRating.voice_over) +
+        buildFiveStarsRowHtml('story', 'Story', myRating.story) +
+        '</div>' +
+        '<div class="drawer-section-head" style="margin-top:14px">' +
+        '<strong>2. Choose Your Voting Rank (Top 3 Choices: Rank 1, 2, or 3)</strong>' +
+        '<span>Rank your top 3 favourite projects across DuetFlix</span>' +
+        '</div>' +
+        '<div class="rank-choices-grid">' +
+        rankOptionsHtml +
+        '</div>' +
+        '<div class="vote-drawer-actions">' +
+        '<button type="button" class="btn primary" data-submit-vote-rating>' +
+        '✓ Save Stars & Confirm Rank Vote' +
+        '</button>' +
+        '</div>' +
+        '</div>' +
+        /* DROPDOWN 2: SEPARATE COMMENTS SECTION (VISIBLE TO ALL VOTERS & ADMIN) */
+        '<div class="comments-drawer" data-comments-drawer ' +
+        (isCommentsOpen ? '' : 'hidden') +
+        '>' +
+        '<div class="drawer-section-head">' +
+        '<strong>💬 Film Comments & Feedback (' +
+        stats.comments.length +
+        ')</strong>' +
+        '<span>Visible to all voters, teams & faculty admins</span>' +
+        '</div>' +
+        '<div class="video-comments-list">' +
+        commentsListHtml +
+        '</div>' +
+        '<div class="video-comment-form">' +
+        '<input type="text" class="comment-input" data-comment-input maxlength="500" placeholder="Add a public comment about this film…" aria-label="Write a comment" />' +
+        '<button type="button" class="btn sm primary" data-post-comment>Post Comment</button>' +
+        '</div>' +
         '</div>' +
         '</article>'
       );
@@ -768,6 +1346,8 @@ async function loadVoterDashboard(user, opts = {}) {
   voterDashboard.classList.add('visible');
   document.body.classList.add('authenticated-view');
 
+  await syncEngagementFromCloud();
+
   const profile = await supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
   const displayName = profile.data?.full_name || (user.email || 'Student').split('@')[0];
   const welcomeEl = document.getElementById('voterWelcome');
@@ -781,8 +1361,6 @@ async function loadVoterDashboard(user, opts = {}) {
   ]);
 
   if (settings.error) throw settings.error;
-  if (projects.error) throw projects.error;
-  if (votes.error) throw votes.error;
 
   cachedVoterMembersByGroup = new Map();
   (membersRes.data || []).forEach((m) => {
@@ -811,24 +1389,84 @@ async function loadVoterDashboard(user, opts = {}) {
       '</span>';
   }
 
-  cachedVoterProjects = projects.data || [];
-  cachedVoterHasVoted = (votes.data || []).length > 0;
+  let approvedList = !projects.error && Array.isArray(projects.data) ? projects.data : [];
+
+  // Fallback for Admin or non-voter roles when get_approved_arena_projects returns 0 rows
+  if (!approvedList.length && cachedAdminSubmissions.length) {
+    approvedList = cachedAdminSubmissions
+      .filter((s) => s.status === 'approved')
+      .map((s) => ({
+        submission_id: s.id,
+        group_id: s.group_id,
+        team_name: cachedAdminGroupsMap.get(s.group_id) || 'Student Team',
+        project_title: s.title,
+        project_description: s.description,
+        video_url: s.video_url,
+        thumbnail_path: s.thumbnail_path || null,
+        submitted_at: s.submitted_at,
+      }));
+  }
+
+  if (!approvedList.length) {
+    const [directSubs, directGroups, featuredRpc] = await Promise.all([
+      supabase.from('project_submissions').select('*').eq('status', 'approved').order('submitted_at', { ascending: false }),
+      supabase.from('project_groups').select('id,name'),
+      supabase.rpc('get_homepage_featured_projects'),
+    ]);
+    const gMap = new Map((directGroups.data || []).map((g) => [g.id, g.name]));
+    if (!directSubs.error && directSubs.data?.length) {
+      approvedList = directSubs.data.map((s) => ({
+        submission_id: s.id,
+        group_id: s.group_id,
+        team_name: gMap.get(s.group_id) || 'Student Team',
+        project_title: s.title,
+        project_description: s.description,
+        video_url: s.video_url,
+        thumbnail_path: s.thumbnail_path || null,
+        submitted_at: s.submitted_at,
+      }));
+    } else if (!featuredRpc.error && featuredRpc.data?.length) {
+      approvedList = featuredRpc.data.map((f, idx) => ({
+        submission_id: f.submission_id || f.id || 'featured-' + idx,
+        group_id: f.group_id || '',
+        team_name: f.team_name || 'DUET Student Team',
+        project_title: f.project_title || f.title || 'Featured Student Film',
+        project_description: f.project_description || f.description || '',
+        video_url: f.video_url || '',
+        thumbnail_path: f.thumbnail_path || null,
+      }));
+    }
+  }
+
+  cachedVoterProjects = approvedList;
+  cachedVoterHasVoted = !votes.error && (votes.data || []).length > 0;
+
+  // Seed initial Rank #1 if user already voted in DB
+  if (cachedVoterHasVoted && votes.data?.[0]?.submission_id) {
+    const viewer = getCurrentViewerMeta();
+    if (!engagementState.ranksByUser[viewer.uid]) {
+      engagementState.ranksByUser[viewer.uid] = {
+        '1': String(votes.data[0].submission_id),
+        userName: viewer.name,
+        userEmail: viewer.email,
+        updatedAt: new Date().toISOString(),
+      };
+      persistEngagementState(false);
+    }
+  }
 
   renderVoterProjects();
 
   const voterMsg = document.getElementById('voterMessage');
   if (voterMsg) {
-    voterMsg.textContent = cachedVoterHasVoted
-      ? 'Your official vote has been recorded. Each student account may vote once.'
-      : cachedVoterVotingOpen
-      ? 'Select your favourite project below to cast your single official vote.'
-      : 'You can browse approved demonstrations below while voting is closed.';
+    voterMsg.textContent =
+      'Click "★ Vote & Rate" on any film to rate Character Consistency, Voice Over, and Story (1–5 stars) and assign your Top 3 Ranks (#1, #2, #3), or click "💬 Comments" to join the discussion.';
   }
 }
 
 document.getElementById('refreshVoter')?.addEventListener('click', async () => {
   try {
-    await loadVoterDashboard(activeUser);
+    await loadVoterDashboard(activeUser, { keepTeamView: currentArenaRole === 'team' || isArenaAdmin });
     showToast('Project exhibition refreshed.');
   } catch (e) {
     const msg = document.getElementById('voterMessage');
@@ -837,27 +1475,208 @@ document.getElementById('refreshVoter')?.addEventListener('click', async () => {
 });
 
 document.getElementById('voterProjectList')?.addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-cast-vote]');
-  if (!btn) return;
-  const card = btn.closest('[data-vote-submission]');
-  const titleText = card?.querySelector('h3')?.textContent || 'this project';
-  if (!window.confirm(`Cast your single official vote for "${titleText}"? This cannot be undone.`)) {
+  const card = e.target.closest('[data-vote-submission]');
+  if (!card) return;
+  const subId = String(card.dataset.voteSubmission || '');
+
+  // 1. Toggle Vote & Rate Drawer
+  const voteToggleBtn = e.target.closest('[data-toggle-vote-drawer]');
+  if (voteToggleBtn) {
+    const drawer = card.querySelector('[data-vote-drawer]');
+    if (!drawer) return;
+    const willOpen = drawer.hidden;
+    drawer.hidden = !willOpen;
+    if (willOpen) openVoteDrawers.add(subId);
+    else openVoteDrawers.delete(subId);
     return;
   }
-  btn.disabled = true;
-  btn.textContent = 'Submitting vote…';
-  try {
-    const { error } = await supabase
-      .from('votes')
-      .insert({ voter_id: activeUser.id, submission_id: card.dataset.voteSubmission });
-    if (error) throw error;
-    showToast('Your vote has been recorded!');
-    await loadVoterDashboard(activeUser);
-  } catch (err) {
-    const msg = document.getElementById('voterMessage');
-    if (msg) msg.textContent = err.message || 'Could not submit your vote.';
-    btn.disabled = false;
-    btn.textContent = 'Try again';
+
+  // 2. Toggle Comments Drawer
+  const commentToggleBtn = e.target.closest('[data-toggle-comments]');
+  if (commentToggleBtn) {
+    const drawer = card.querySelector('[data-comments-drawer]');
+    if (!drawer) return;
+    const willOpen = drawer.hidden;
+    drawer.hidden = !willOpen;
+    commentToggleBtn.classList.toggle('active', willOpen);
+    if (willOpen) {
+      openCommentDrawers.add(subId);
+      card.querySelector('[data-comment-input]')?.focus();
+    } else {
+      openCommentDrawers.delete(subId);
+    }
+    return;
+  }
+
+  // 3. Interactive 5-Star Pick for Character Consistency, Voice Over, Story
+  const starBtn = e.target.closest('[data-star-cat]');
+  if (starBtn) {
+    const cat = starBtn.dataset.starCat;
+    const val = Number(starBtn.dataset.starVal || 0);
+    card.setAttribute('data-star-' + cat, String(val));
+    const row = starBtn.closest('[data-cat-row]');
+    if (row) {
+      row.querySelectorAll('[data-star-val]').forEach((b) => {
+        const bVal = Number(b.dataset.starVal || 0);
+        const filled = bVal <= val;
+        b.classList.toggle('is-filled', filled);
+        b.textContent = filled ? '★' : '☆';
+      });
+      const pill = row.querySelector('[data-cat-score]');
+      if (pill) pill.textContent = `${val} / 5`;
+    }
+    return;
+  }
+
+  // 4. Interactive Rank #1, #2, #3 Choice Pick
+  const rankBtn = e.target.closest('[data-pick-rank]');
+  if (rankBtn) {
+    const rk = Number(rankBtn.dataset.pickRank || 0);
+    const currentRk = Number(card.dataset.selectedRank || 0);
+    const nextRk = currentRk === rk ? 0 : rk;
+    card.dataset.selectedRank = String(nextRk);
+    card.querySelectorAll('[data-pick-rank]').forEach((b) => {
+      const bRk = Number(b.dataset.pickRank || 0);
+      b.classList.toggle('is-selected', bRk === nextRk);
+    });
+    return;
+  }
+
+  // 5. Save 3-Category Stars & Confirm Rank Choice
+  const submitVoteBtn = e.target.closest('[data-submit-vote-rating]');
+  if (submitVoteBtn) {
+    if (!activeUser) {
+      showToast('Please sign in to rate and vote.');
+      return;
+    }
+    const charStars = Number(card.getAttribute('data-star-character_consistency') || 0);
+    const voiceStars = Number(card.getAttribute('data-star-voice_over') || 0);
+    const storyStars = Number(card.getAttribute('data-star-story') || 0);
+    const chosenRank = Number(card.dataset.selectedRank || 0);
+
+    if (!charStars && !voiceStars && !storyStars && !chosenRank) {
+      showToast('Select star ratings (1–5) or choose a Rank (#1, #2, or #3) first.');
+      return;
+    }
+
+    const viewer = getCurrentViewerMeta();
+    if (!engagementState.ratingsBySub[subId]) engagementState.ratingsBySub[subId] = {};
+    engagementState.ratingsBySub[subId][viewer.uid] = {
+      userId: viewer.uid,
+      userName: viewer.name,
+      userEmail: viewer.email,
+      character_consistency: charStars,
+      voice_over: voiceStars,
+      story: storyStars,
+      rank: chosenRank,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (!engagementState.ranksByUser[viewer.uid]) {
+      engagementState.ranksByUser[viewer.uid] = {
+        userName: viewer.name,
+        userEmail: viewer.email,
+      };
+    }
+    const userRanks = engagementState.ranksByUser[viewer.uid];
+    // Clear any previous rank slot pointing to this submission
+    ['1', '2', '3'].forEach((slot) => {
+      if (String(userRanks[slot] || '') === subId) delete userRanks[slot];
+    });
+    if (chosenRank >= 1 && chosenRank <= 3) {
+      userRanks[String(chosenRank)] = subId;
+    }
+    userRanks.userName = viewer.name;
+    userRanks.userEmail = viewer.email;
+    userRanks.updatedAt = new Date().toISOString();
+
+    persistEngagementState(true);
+
+    // Also record primary vote in Supabase votes table if not yet recorded
+    if (!cachedVoterHasVoted && chosenRank >= 1) {
+      try {
+        const { error } = await supabase
+          .from('votes')
+          .insert({ voter_id: activeUser.id, submission_id: subId });
+        if (!error) cachedVoterHasVoted = true;
+      } catch {
+        // Ignore if already voted in DB
+      }
+    }
+
+    renderVoterProjects();
+    if (isArenaAdmin) {
+      refreshAdminVoteCounts();
+      if (typeof renderAdminVideoAnalytics === 'function') renderAdminVideoAnalytics();
+    }
+    showToast(
+      chosenRank
+        ? `Saved your star ratings & Rank #${chosenRank} choice!`
+        : 'Saved your 5-star category ratings!'
+    );
+    return;
+  }
+
+  // 6. Post a New Comment on This Video
+  const postCommentBtn = e.target.closest('[data-post-comment]');
+  if (postCommentBtn) {
+    if (!activeUser) {
+      showToast('Please sign in to post a comment.');
+      return;
+    }
+    const input = card.querySelector('[data-comment-input]');
+    const text = (input?.value || '').trim();
+    if (!text) {
+      showToast('Write a comment before posting.');
+      input?.focus();
+      return;
+    }
+    const viewer = getCurrentViewerMeta();
+    if (!engagementState.commentsBySub[subId]) engagementState.commentsBySub[subId] = [];
+    engagementState.commentsBySub[subId].push({
+      id: 'cmt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      submissionId: subId,
+      userId: viewer.uid,
+      userName: viewer.name,
+      userEmail: viewer.email,
+      userRole: viewer.role,
+      text,
+      createdAt: new Date().toISOString(),
+    });
+    persistEngagementState(true);
+    openCommentDrawers.add(subId);
+    renderVoterProjects();
+    if (isArenaAdmin && typeof renderAdminCommentsModeration === 'function') {
+      renderAdminCommentsModeration();
+      renderAdminVideoAnalytics();
+    }
+    showToast('Comment posted!');
+    return;
+  }
+
+  // 7. Delete a Comment (Admin or Comment Author)
+  const delCommentBtn = e.target.closest('[data-delete-comment]');
+  if (delCommentBtn) {
+    const cmtId = delCommentBtn.dataset.deleteComment;
+    const listArr = engagementState.commentsBySub[subId] || [];
+    const target = listArr.find((c) => String(c.id) === String(cmtId));
+    if (target) {
+      target.deleted = true;
+      persistEngagementState(true);
+      renderVoterProjects();
+      if (isArenaAdmin && typeof renderAdminCommentsModeration === 'function') {
+        renderAdminCommentsModeration();
+        renderAdminVideoAnalytics();
+      }
+      showToast('Comment removed.');
+    }
+  }
+});
+
+document.getElementById('voterProjectList')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.matches('[data-comment-input]')) {
+    e.preventDefault();
+    e.target.closest('.video-comment-form')?.querySelector('[data-post-comment]')?.click();
   }
 });
 
@@ -1187,12 +2006,23 @@ async function refreshAdminVoteCounts() {
       box.innerHTML = '<div class="dashboard-empty">No approved projects or votes recorded yet.</div>';
       return;
     }
+    const subByTitle = new Map(
+      cachedAdminSubmissions.map((s) => [String(s.title || '').trim().toLowerCase(), String(s.id)])
+    );
     const maxVotes = Math.max(1, ...cachedAdminResults.map((r) => Number(r.vote_count || 0)));
     box.innerHTML = cachedAdminResults
       .map((x, idx) => {
         const count = Number(x.vote_count || 0);
         const pct = Math.round((count / maxVotes) * 100);
         const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
+        const matchSubId =
+          x.submission_id ||
+          subByTitle.get(String(x.project_title || '').trim().toLowerCase()) ||
+          '';
+        const eStats = matchSubId ? getProjectEngagementStats(matchSubId) : null;
+        const metaExtra = eStats
+          ? ` · ★ ${eStats.overallAvg.toFixed(1)}/5 · 🥇${eStats.rank1} 🥈${eStats.rank2} 🥉${eStats.rank3}`
+          : '';
         return (
           '<div class="admin-result">' +
           '<span class="rank-badge ' +
@@ -1205,6 +2035,7 @@ async function refreshAdminVoteCounts() {
           escapeHtml(x.project_title) +
           '</strong> · <span style="color:var(--muted)">' +
           escapeHtml(x.group_name) +
+          escapeHtml(metaExtra) +
           '</span></div>' +
           '<div class="result-bar-wrap"><div class="result-bar-fill" style="width:' +
           pct +
@@ -1330,10 +2161,11 @@ function renderAdminQueue() {
   const dismissedIds = getDismissedRejectedIds();
 
   const reviewQueue = cachedAdminSubmissions.filter((x) => {
-    // Approved and Rejected live in their own dedicated galleries
-    if (x.status === 'approved' || x.status === 'rejected') return false;
+    if (x.status === 'rejected') return false;
+    if (statusFilter === 'pending' && x.status !== 'pending') return false;
+    if (statusFilter === 'approved' && x.status !== 'approved') return false;
+    if (statusFilter === 'draft' && x.status !== 'draft') return false;
     if (dismissedIds.has(String(x.id))) return false;
-    if (statusFilter !== 'all' && x.status !== statusFilter) return false;
     if (!query) return true;
     const teamName = cachedAdminGroupsMap.get(x.group_id) || '';
     const members = cachedAdminMembersByGroup.get(x.group_id) || [];
@@ -1345,14 +2177,13 @@ function renderAdminQueue() {
   if (!reviewQueue.length) {
     list.innerHTML =
       statusFilter === 'pending'
-        ? '<div class="dashboard-empty">No pending projects waiting for review. Rejected videos are stored in the Rejected Videos Gallery below.</div>'
+        ? '<div class="dashboard-empty">No pending projects waiting for review. Approved videos are shown in the Approved Exhibition Gallery below, or switch the filter above to "Approved videos" or "All submissions".</div>'
         : '<div class="dashboard-empty">No submissions match the current queue filter.</div>';
     return;
   }
 
   list.innerHTML = reviewQueue
     .map((x) => {
-      const embed = getYoutubeEmbedUrl(x.video_url || '');
       const members = cachedAdminMembersByGroup.get(x.group_id) || [];
       return (
         '<article class="admin-submission" data-submission-id="' +
@@ -1394,7 +2225,7 @@ function renderAdminQueue() {
           )
           .join('') || '<span>No members listed</span>') +
         '</div>' +
-        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.title, 'admin-video') +
+        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.title, 'admin-video', x.id) +
         '<label class="dash-field">Reviewer Feedback (shared with team)' +
         '<textarea class="admin-feedback" maxlength="2000" placeholder="Optional feedback or required revisions">' +
         escapeHtml(x.admin_feedback || '') +
@@ -1448,7 +2279,6 @@ function renderRejectedGallery() {
 
   rejectedContainer.innerHTML = rejectedList
     .map((x) => {
-      const embed = getYoutubeEmbedUrl(x.video_url || '');
       const teamName = cachedAdminGroupsMap.get(x.group_id) || 'Student Team';
       return (
         '<article class="rejected-video-card" data-submission-id="' +
@@ -1467,7 +2297,7 @@ function renderRejectedGallery() {
         '</div>' +
         '<span class="dash-status rejected">Rejected</span>' +
         '</div>' +
-        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.title, 'admin-video rejected-video-frame') +
+        buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.title, 'admin-video rejected-video-frame', x.id) +
         '<p class="rejected-desc">' +
         escapeHtml(x.description) +
         '</p>' +
@@ -1486,6 +2316,361 @@ function renderRejectedGallery() {
     })
     .join('');
 }
+
+function renderAdminVideoAnalytics() {
+  const container = document.getElementById('adminVideoAnalytics');
+  if (!container) return;
+
+  const allVideos = cachedAdminSubmissions.length
+    ? cachedAdminSubmissions.filter((x) => x.status !== 'rejected')
+    : cachedVoterProjects.map((p) => ({
+        id: p.submission_id,
+        group_id: p.group_id,
+        title: p.project_title,
+        description: p.project_description,
+        video_url: p.video_url,
+        thumbnail_path: p.thumbnail_path,
+        status: 'approved',
+      }));
+
+  if (!allVideos.length) {
+    container.innerHTML = '<div class="dashboard-empty">No videos available for analytics yet.</div>';
+    return;
+  }
+
+  let totalPlaysAll = 0;
+  let totalWatchSecAll = 0;
+  let totalWatchUsersAll = 0;
+  let totalAttentionSumAll = 0;
+  let totalCommentsAll = 0;
+
+  const cardsHtml = allVideos
+    .map((v) => {
+      const subId = String(v.id);
+      const teamName = cachedAdminGroupsMap.get(v.group_id) || 'Student Team';
+      const stats = getProjectEngagementStats(subId);
+      totalCommentsAll += stats.comments.length;
+
+      // Combine watch entries + rating/rank entries so every engaged user appears in the per-user table
+      const userMap = new Map();
+      stats.watchEntries.forEach((w) => {
+        totalPlaysAll += Number(w.playCount || 1);
+        totalWatchSecAll += Number(w.watchedSeconds || 0);
+        totalWatchUsersAll += 1;
+        totalAttentionSumAll += Number(w.attentionPct || 0);
+        userMap.set(w.userId || w.userEmail, {
+          userId: w.userId,
+          userName: w.userName || 'Viewer',
+          userEmail: w.userEmail || '—',
+          watchedSeconds: Number(w.watchedSeconds || 0),
+          attentionPct: Number(w.attentionPct || 0),
+          playCount: Number(w.playCount || 1),
+          lastActive: w.lastWatchedAt,
+        });
+      });
+
+      const ratingsMap = engagementState.ratingsBySub[subId] || {};
+      Object.entries(ratingsMap).forEach(([uid, r]) => {
+        const existing = userMap.get(uid) || {
+          userId: uid,
+          userName: r.userName || 'Voter',
+          userEmail: r.userEmail || '—',
+          watchedSeconds: 0,
+          attentionPct: 0,
+          playCount: 0,
+          lastActive: r.updatedAt,
+        };
+        existing.rating = r;
+        if (!existing.lastActive || new Date(r.updatedAt || 0) > new Date(existing.lastActive || 0)) {
+          existing.lastActive = r.updatedAt;
+        }
+        userMap.set(uid, existing);
+      });
+
+      Object.entries(engagementState.ranksByUser || {}).forEach(([uid, rkObj]) => {
+        const userRankForSub =
+          String(rkObj?.['1'] || '') === subId
+            ? 1
+            : String(rkObj?.['2'] || '') === subId
+            ? 2
+            : String(rkObj?.['3'] || '') === subId
+            ? 3
+            : 0;
+        if (userRankForSub) {
+          const existing = userMap.get(uid) || {
+            userId: uid,
+            userName: rkObj.userName || 'Voter',
+            userEmail: rkObj.userEmail || '—',
+            watchedSeconds: 0,
+            attentionPct: 0,
+            playCount: 0,
+            lastActive: rkObj.updatedAt,
+          };
+          existing.rankChoice = userRankForSub;
+          userMap.set(uid, existing);
+        }
+      });
+
+      const userRows = [...userMap.values()];
+
+      const userTableHtml = userRows.length
+        ? '<table class="analytics-user-table">' +
+          '<thead><tr>' +
+          '<th>User (Viewer / Voter)</th>' +
+          '<th>Time Watched (Minutes)</th>' +
+          '<th>Audience Attention</th>' +
+          '<th>Category Stars (Char / Voice / Story)</th>' +
+          '<th>Rank Vote</th>' +
+          '<th>Last Active</th>' +
+          '</tr></thead><tbody>' +
+          userRows
+            .map((u) => {
+              const r = u.rating || {};
+              const rk = u.rankChoice || r.rank || 0;
+              return (
+                '<tr>' +
+                '<td><strong>' +
+                escapeHtml(u.userName) +
+                '</strong><div class="dash-help" style="font-size:11px">' +
+                escapeHtml(u.userEmail) +
+                '</div></td>' +
+                '<td><strong style="font-family:var(--mono)">' +
+                escapeHtml(formatWatchMinutes(u.watchedSeconds)) +
+                '</strong></td>' +
+                '<td>' +
+                '<div class="attention-cell">' +
+                '<span style="font-family:var(--mono);font-weight:700">' +
+                Number(u.attentionPct || 0) +
+                '%</span>' +
+                '<div class="attention-mini-bar"><div class="attention-mini-fill" style="width:' +
+                Math.min(100, Number(u.attentionPct || 0)) +
+                '%"></div></div>' +
+                '</div>' +
+                '</td>' +
+                '<td style="font-family:var(--mono);font-size:12px">' +
+                (r.character_consistency || r.voice_over || r.story
+                  ? `★${r.character_consistency || 0} / ★${r.voice_over || 0} / ★${r.story || 0}`
+                  : '—') +
+                '</td>' +
+                '<td>' +
+                (rk === 1
+                  ? '<span class="my-rank-pill">🥇 Rank #1</span>'
+                  : rk === 2
+                  ? '<span class="my-rank-pill">🥈 Rank #2</span>'
+                  : rk === 3
+                  ? '<span class="my-rank-pill">🥉 Rank #3</span>'
+                  : '—') +
+                '</td>' +
+                '<td style="font-size:12px;color:var(--muted)">' +
+                (u.lastActive ? escapeHtml(new Date(u.lastActive).toLocaleString()) : '—') +
+                '</td>' +
+                '</tr>'
+              );
+            })
+            .join('') +
+          '</tbody></table>'
+        : '<div class="comments-empty">No user watch sessions or ratings recorded for this video yet. Play the video to begin tracking real-time watch minutes and attention.</div>';
+
+      return (
+        '<article class="analytics-video-card">' +
+        '<div class="analytics-video-head">' +
+        '<div>' +
+        '<div class="eyebrow">' +
+        escapeHtml(teamName) +
+        '</div>' +
+        '<h4>' +
+        escapeHtml(v.title) +
+        '</h4>' +
+        '</div>' +
+        '<div class="analytics-head-badges">' +
+        '<span class="card-avg-star-badge">★ ' +
+        (stats.overallAvg > 0 ? stats.overallAvg.toFixed(1) + ' / 5.0' : 'No ratings') +
+        '</span>' +
+        '<span class="dash-status ' +
+        escapeHtml(v.status || 'approved') +
+        '">' +
+        escapeHtml(v.status || 'approved') +
+        '</span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="analytics-kpi-grid">' +
+        '<div class="analytics-kpi-box">' +
+        '<span>Average Audience Attention</span>' +
+        '<strong>' +
+        stats.avgAttentionPct +
+        '%</strong>' +
+        '<div class="attention-mini-bar" style="margin-top:6px"><div class="attention-mini-fill" style="width:' +
+        stats.avgAttentionPct +
+        '%"></div></div>' +
+        '<small>' +
+        stats.totalViewers +
+        ' viewer' +
+        (stats.totalViewers === 1 ? '' : 's') +
+        ' tracked</small>' +
+        '</div>' +
+        '<div class="analytics-kpi-box">' +
+        '<span>Average Watch Time (Per User)</span>' +
+        '<strong>' +
+        escapeHtml(formatWatchMinutes(stats.avgWatchSeconds)) +
+        '</strong>' +
+        '<small>Total across users: ' +
+        escapeHtml(
+          formatWatchMinutes(
+            stats.watchEntries.reduce((s, w) => s + Number(w.watchedSeconds || 0), 0)
+          )
+        ) +
+        '</small>' +
+        '</div>' +
+        '<div class="analytics-kpi-box">' +
+        '<span>5-Star Category Averages</span>' +
+        '<div class="analytics-star-breakdown">' +
+        '<div>Character Consistency: <strong>★ ' +
+        stats.avgChar.toFixed(1) +
+        '/5</strong></div>' +
+        '<div>Voice Over: <strong>★ ' +
+        stats.avgVoice.toFixed(1) +
+        '/5</strong></div>' +
+        '<div>Story: <strong>★ ' +
+        stats.avgStory.toFixed(1) +
+        '/5</strong></div>' +
+        '</div>' +
+        '</div>' +
+        '<div class="analytics-kpi-box">' +
+        '<span>Ranked Vote Choices (1 / 2 / 3)</span>' +
+        '<div class="analytics-star-breakdown">' +
+        '<div>🥇 Rank #1: <strong>' +
+        stats.rank1 +
+        '</strong> · 🥈 Rank #2: <strong>' +
+        stats.rank2 +
+        '</strong></div>' +
+        '<div>🥉 Rank #3: <strong>' +
+        stats.rank3 +
+        '</strong> · Comments: <strong>' +
+        stats.comments.length +
+        '</strong></div>' +
+        '<div>Weighted Rank Score: <strong>' +
+        stats.weightedRankPoints +
+        ' pts</strong></div>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div class="analytics-user-section">' +
+        '<strong>Per-User Watch Time & Audience Attention Breakdown (' +
+        userRows.length +
+        ' user' +
+        (userRows.length === 1 ? '' : 's') +
+        ')</strong>' +
+        userTableHtml +
+        '</div>' +
+        '</article>'
+      );
+    })
+    .join('');
+
+  const globalAvgWatchSec = totalWatchUsersAll ? totalWatchSecAll / totalWatchUsersAll : 0;
+  const globalAvgAttention = totalWatchUsersAll
+    ? Math.round(totalAttentionSumAll / totalWatchUsersAll)
+    : 0;
+
+  container.innerHTML =
+    '<div class="admin-grid" style="margin-bottom:18px">' +
+    '<div class="admin-stat"><span>Total Video Sessions</span><strong>' +
+    totalPlaysAll +
+    '</strong></div>' +
+    '<div class="admin-stat"><span>Avg Audience Attention</span><strong>' +
+    globalAvgAttention +
+    '%</strong></div>' +
+    '<div class="admin-stat"><span>Avg Watch Time / User</span><strong style="font-size:20px">' +
+    escapeHtml(formatWatchMinutes(globalAvgWatchSec)) +
+    '</strong></div>' +
+    '<div class="admin-stat"><span>Total Comments</span><strong>' +
+    totalCommentsAll +
+    '</strong></div>' +
+    '</div>' +
+    cardsHtml;
+}
+
+function renderAdminCommentsModeration() {
+  const container = document.getElementById('adminCommentsModerationList');
+  if (!container) return;
+
+  const titleById = new Map();
+  cachedAdminSubmissions.forEach((s) => titleById.set(String(s.id), s.title));
+  cachedVoterProjects.forEach((p) => titleById.set(String(p.submission_id), p.project_title));
+
+  const allComments = [];
+  Object.entries(engagementState.commentsBySub || {}).forEach(([subId, arr]) => {
+    (arr || []).forEach((c) => {
+      if (!c.deleted) {
+        allComments.push({
+          ...c,
+          submissionId: subId,
+          projectTitle: titleById.get(String(subId)) || 'Project Video',
+        });
+      }
+    });
+  });
+
+  allComments.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+  if (!allComments.length) {
+    container.innerHTML = '<div class="dashboard-empty">No comments posted across any videos yet.</div>';
+    return;
+  }
+
+  container.innerHTML = allComments
+    .map(
+      (c) =>
+        '<div class="video-comment-item admin-mod-comment" data-mod-sub="' +
+        escapeHtml(c.submissionId) +
+        '" data-mod-cmt="' +
+        escapeHtml(c.id) +
+        '">' +
+        '<div class="video-comment-top">' +
+        '<div>' +
+        '<strong>' +
+        escapeHtml(c.userName || 'Student') +
+        '</strong> <span class="comment-role-pill">' +
+        escapeHtml(c.userRole || 'Voter') +
+        '</span> · <span style="color:var(--primary);font-weight:700">' +
+        escapeHtml(c.projectTitle) +
+        '</span>' +
+        '</div>' +
+        '<div class="video-comment-meta">' +
+        '<span>' +
+        escapeHtml(new Date(c.createdAt).toLocaleString()) +
+        '</span>' +
+        '<button type="button" class="btn sm danger" data-admin-del-comment="' +
+        escapeHtml(c.id) +
+        '" data-admin-del-sub="' +
+        escapeHtml(c.submissionId) +
+        '">🗑 Delete Comment</button>' +
+        '</div>' +
+        '</div>' +
+        '<p class="video-comment-body">' +
+        escapeHtml(c.text) +
+        '</p>' +
+        '</div>'
+    )
+    .join('');
+}
+
+document.getElementById('adminCommentsModerationList')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-admin-del-comment]');
+  if (!btn || !isArenaAdmin) return;
+  const cmtId = btn.dataset.adminDelComment;
+  const subId = btn.dataset.adminDelSub;
+  const arr = engagementState.commentsBySub[String(subId)] || [];
+  const target = arr.find((c) => String(c.id) === String(cmtId));
+  if (target) {
+    target.deleted = true;
+    persistEngagementState(true);
+    renderAdminCommentsModeration();
+    renderAdminVideoAnalytics();
+    renderVoterProjects();
+    showToast('Comment deleted by administrator.');
+  }
+});
 
 function updateAdminKpiCounters() {
   const dismissedIds = getDismissedRejectedIds();
@@ -1506,11 +2691,13 @@ document.getElementById('adminQueueStatusFilter')?.addEventListener('change', re
 
 async function loadAdminDashboard() {
   if (!isArenaAdmin) return;
+  await syncEngagementFromCloud();
+
   const [a, b, g, m] = await Promise.all([
     supabase.from('competition_settings').select('*').eq('id', true).single(),
     supabase
       .from('project_submissions')
-      .select('id,group_id,title,description,video_url,thumbnail_path,status,admin_feedback,submitted_at')
+      .select('*')
       .order('submitted_at', { ascending: false }),
     supabase.from('project_groups').select('id,name'),
     supabase.from('group_members').select('group_id,member_name,roll_number').order('created_at'),
@@ -1549,6 +2736,8 @@ async function loadAdminDashboard() {
   updateAdminKpiCounters();
   renderAdminQueue();
   renderRejectedGallery();
+  renderAdminVideoAnalytics();
+  renderAdminCommentsModeration();
 
   const approved = cachedAdminSubmissions.filter((x) => x.status === 'approved');
   const approvedList = document.getElementById('adminApprovedGallery');
@@ -1557,16 +2746,31 @@ async function loadAdminDashboard() {
       ? approved
           .map(
             (x) =>
-              '<article class="approved-mini" data-submission-id="' +
+              '<article class="admin-submission" data-submission-id="' +
               escapeHtml(x.id) +
+              '" data-group-id="' +
+              escapeHtml(x.group_id) +
               '">' +
-              '<div><strong>' +
+              '<div class="group-title">' +
+              '<div>' +
+              '<h4>' +
               escapeHtml(x.title) +
-              '</strong><span>' +
+              '</h4>' +
+              '<span class="dash-help">' +
               escapeHtml(cachedAdminGroupsMap.get(x.group_id) || 'Team') +
-              '</span></div>' +
+              ' · Approved in Exhibition</span>' +
+              '</div>' +
               '<span class="dash-status approved">Approved</span>' +
-              '<button class="text-button" data-review="pending" type="button">Return to Queue</button>' +
+              '</div>' +
+              '<p>' +
+              escapeHtml(x.description) +
+              '</p>' +
+              buildYoutubePlayerHtml(x.video_url, x.thumbnail_path, x.title, 'admin-video', x.id) +
+              '<div class="admin-actions">' +
+              '<button class="btn sm" data-review="pending" type="button">↩ Return to Pending Queue</button>' +
+              '<button class="btn sm danger" data-review="rejected" type="button">✕ Move to Rejected</button>' +
+              '<button class="btn sm danger" data-delete-submission type="button" style="margin-left:auto">🗑 Delete Video</button>' +
+              '</div>' +
               '<div class="admin-message" role="status"></div>' +
               '</article>'
           )

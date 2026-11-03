@@ -194,6 +194,9 @@
         <div class="deadline-note" id="votingNotice">Loading voting window status…</div>
         <div class="voter-message" id="voterMessage" role="status"></div>
 
+        <!-- Voter Top-3 Ranked Choices Summary Bar -->
+        <div class="ranked-ballot-bar" id="voterRankedBallotSummary" aria-live="polite"></div>
+
         <!-- Search & Filter Toolbar -->
         <div class="voter-toolbar">
           <div class="search-input-wrap">
@@ -250,6 +253,8 @@
         <!-- Admin Section Filter Tabs -->
         <div class="admin-tabs" role="tablist" aria-label="Admin sections">
           <button class="admin-tab active" type="button" data-admin-section="all">All Panels</button>
+          <button class="admin-tab" type="button" data-admin-section="analytics">📊 Video Analytics</button>
+          <button class="admin-tab" type="button" data-admin-section="comments">💬 Comments</button>
           <button class="admin-tab" type="button" data-admin-section="queue">Pending Queue</button>
           <button class="admin-tab" type="button" data-admin-section="gallery">Approved Gallery</button>
           <button class="admin-tab" type="button" data-admin-section="rejected" id="rejectedGalleryTabBtn">Rejected Videos Gallery</button>
@@ -348,8 +353,9 @@
             <input type="search" id="adminQueueSearch" placeholder="Search pending queue by project title, team name, or roll number…" aria-label="Search review queue" />
             <select id="adminQueueStatusFilter" aria-label="Filter queue status">
               <option value="pending" selected>Pending review only</option>
+              <option value="approved">Approved videos</option>
               <option value="draft">Saved drafts only</option>
-              <option value="all">All active (Pending + Drafts)</option>
+              <option value="all">All submissions (Pending + Approved + Drafts)</option>
             </select>
           </div>
           <div class="admin-list" id="adminSubmissionList">
@@ -391,11 +397,39 @@
         <section class="admin-panel" data-panel-group="results">
           <div class="admin-panel-head">
             <div>
-              <h3>Live Aggregate Standings (Counts Only)</h3>
-              <p class="dash-help" style="margin:4px 0 0">Individual voter identities are never exposed. Standings refresh automatically every 15 seconds.</p>
+              <h3>Live Aggregate Standings (Counts &amp; Ranked Points)</h3>
+              <p class="dash-help" style="margin:4px 0 0">Standings combine official votes, Rank 1 / 2 / 3 choices, and category star ratings.</p>
             </div>
           </div>
           <div id="adminResults" class="admin-results">Vote totals are loading…</div>
+        </section>
+
+        <!-- Dedicated Video Analytics Dashboard -->
+        <section class="admin-panel" id="adminAnalyticsPanel" data-panel-group="analytics">
+          <div class="admin-panel-head">
+            <div>
+              <div class="eyebrow">Audience Retention &amp; Engagement Telemetry</div>
+              <h3>Video Analytics Dashboard</h3>
+              <p class="dash-help" style="margin:4px 0 0">Track average audience attention (%), average watch time in minutes across viewers, individual per-user watch durations, 5-star category ratings (Character Consistency, Voice Over, Story), and Rank #1 / #2 / #3 choices for every video.</p>
+            </div>
+          </div>
+          <div id="adminVideoAnalytics" class="admin-analytics-wrap">
+            <div class="dashboard-empty">Loading video analytics…</div>
+          </div>
+        </section>
+
+        <!-- Admin Comments Moderation Panel -->
+        <section class="admin-panel" id="adminCommentsPanel" data-panel-group="comments">
+          <div class="admin-panel-head">
+            <div>
+              <div class="eyebrow">Community Discussion &amp; Moderation</div>
+              <h3>All Video Comments</h3>
+              <p class="dash-help" style="margin:4px 0 0">Review and moderate comments posted by voters and teams across all project videos.</p>
+            </div>
+          </div>
+          <div id="adminCommentsModerationList" class="admin-comments-mod-list">
+            <div class="dashboard-empty">No comments posted yet.</div>
+          </div>
         </section>
       </div>
     </section>
