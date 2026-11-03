@@ -2771,3 +2771,252 @@ body.dark-mode {
 @media (prefers-reduced-motion: reduce) {
   .featured-stage, .featured-copy, .featured-backdrop { transition: none !important; animation: none !important; }
 }
+
+
+/* ==========================================================================
+   ARENA REBRAND — CLASSIC NETFLIX-INSPIRED RED / BLACK / WHITE
+   Full-bleed cinematic hero with voting card layered over the backdrop.
+   ========================================================================== */
+:root,
+body.dark-mode {
+  color-scheme: dark;
+  --bg: #080808;
+  --bg-subtle: #151515;
+  --surface: #111111;
+  --surface-elevated: #1b1b1b;
+  --surface-tint: #211012;
+  --ink: #ffffff;
+  --ink-secondary: #e5e5e5;
+  --muted: #a3a3a3;
+  --line: #303030;
+  --line-strong: #494949;
+  --primary: #e50914;
+  --primary-hover: #b80710;
+  --primary-soft: rgba(229,9,20,.16);
+  --accent: #e50914;
+  --accent-soft: rgba(229,9,20,.12);
+  --success: #ffffff;
+  --success-bg: rgba(255,255,255,.1);
+  --warning: #f5c518;
+  --warning-bg: rgba(245,197,24,.12);
+  --danger: #ff4b55;
+  --danger-bg: rgba(229,9,20,.14);
+  --shadow-xs: 0 2px 8px rgba(0,0,0,.3);
+  --shadow-sm: 0 6px 18px rgba(0,0,0,.38);
+  --shadow-md: 0 14px 36px rgba(0,0,0,.5);
+  --shadow-lg: 0 28px 70px rgba(0,0,0,.65);
+}
+body {
+  background: #080808 !important;
+  color: #fff;
+}
+body::before { display: none !important; }
+.topbar {
+  background: rgba(8,8,8,.96);
+  border-bottom-color: #262626;
+}
+.brand, .nav a, .nav button { color: #fff; }
+.mark { background: #e50914; }
+.btn.primary, button.primary, .featured-watch {
+  background: #e50914;
+  border-color: #e50914;
+  color: #fff;
+}
+.btn.primary:hover, button.primary:hover {
+  background: #b80710;
+  border-color: #b80710;
+}
+.btn:not(.primary) {
+  background: #1b1b1b;
+  border-color: #454545;
+  color: #fff;
+}
+.btn:not(.primary):hover { background: #292929; border-color: #777; }
+a { color: inherit; }
+input, select, textarea {
+  background-color: #151515;
+  color: #fff;
+  border-color: #3b3b3b;
+}
+input::placeholder, textarea::placeholder { color: #8c8c8c; }
+.card, .panel, .admin-panel, .stat-card, .voter-card, .project-card,
+.role-card, .auth-card, .dashboard-card {
+  background: #111;
+  border-color: #303030;
+  color: #fff;
+}
+h1, h2, h3, h4, strong { color: #fff; }
+p, .muted, .subtle { color: #c4c4c4; }
+footer { background: #080808; border-top-color: #282828; }
+
+/* Full-screen hero: image fills behind the voting panel. */
+.arena-hero {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: min(720px, calc(100vh - 70px));
+  padding: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #080808;
+}
+.featured-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #080808;
+  overflow: hidden;
+}
+.featured-backdrop {
+  background-position: center 38%;
+  background-size: cover;
+  filter: saturate(.88);
+  transform: scale(1.025);
+}
+.featured-shade {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.94) 0%, rgba(0,0,0,.78) 37%, rgba(0,0,0,.46) 66%, rgba(0,0,0,.72) 100%),
+    linear-gradient(0deg, rgba(0,0,0,.82), transparent 62%);
+}
+.featured-copy {
+  position: relative;
+  z-index: 2;
+  width: min(70%, 1120px);
+  padding: clamp(36px, 7vw, 112px);
+  padding-right: clamp(320px, 36vw, 620px);
+}
+.featured-copy .eyebrow { color: #ff3038; }
+.live-dot {
+  background: #e50914;
+  box-shadow: 0 0 0 5px rgba(229,9,20,.2);
+}
+.featured-copy h1 {
+  max-width: 900px;
+  font-size: clamp(42px, 6vw, 82px);
+  line-height: 1.02;
+  letter-spacing: -.05em;
+  color: #fff;
+  text-shadow: 0 3px 24px rgba(0,0,0,.55);
+}
+.featured-copy .lead {
+  max-width: 700px;
+  color: #ededed;
+  font-size: clamp(16px, 1.55vw, 20px);
+  text-shadow: 0 2px 12px rgba(0,0,0,.8);
+}
+.featured-watch {
+  background: #e50914 !important;
+  border-color: #e50914 !important;
+  color: #fff !important;
+  box-shadow: 0 8px 24px rgba(229,9,20,.28);
+}
+.featured-counter { color: #d0d0d0; }
+.featured-arrows { z-index: 3; right: 34%; bottom: 30px; }
+.featured-arrows span {
+  color: #fff;
+  background: rgba(0,0,0,.58);
+  border-color: rgba(255,255,255,.3);
+}
+
+/* The voting rectangle floats over the full-bleed movie backdrop. */
+.voting-hero-panel {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  right: clamp(22px, 4vw, 68px);
+  transform: translateY(-50%);
+  width: clamp(300px, 29vw, 430px);
+  min-height: 460px;
+  padding: 28px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-top: 4px solid #e50914;
+  border-radius: 8px;
+  background: rgba(12,12,12,.94);
+  box-shadow: 0 24px 80px rgba(0,0,0,.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #fff;
+}
+.voting-hero-panel .showcase-label { color: #ff3038; }
+.voting-hero-panel .showcase-badge {
+  background: #1d1d1d;
+  border-color: #454545;
+  color: #eee;
+}
+.voting-hero-panel .showcase-badge.is-live {
+  color: #fff;
+  border-color: #e50914;
+  background: rgba(229,9,20,.2);
+}
+.voting-clock-icon {
+  border-radius: 50%;
+  border-color: rgba(229,9,20,.42);
+  background: rgba(229,9,20,.13);
+  color: #ff3038;
+}
+.voting-kicker { color: #aaa; }
+.voting-timer { color: #fff; }
+.voting-panel-note { color: #d0d0d0; }
+.voting-panel-divider { background: #363636; }
+.voting-panel-foot { color: #aaa; }
+.voting-now-btn {
+  background: #e50914 !important;
+  border-color: #e50914 !important;
+  color: #fff !important;
+}
+.voting-now-btn:disabled {
+  background: #3a3a3a !important;
+  border-color: #3a3a3a !important;
+  color: #aaa !important;
+  opacity: 1;
+}
+.featured-stage.is-sliding-out { transform: translateX(7%); opacity: .15; }
+
+@media (max-width: 900px) {
+  .arena-hero {
+    min-height: 850px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .featured-stage { align-items: flex-start; }
+  .featured-copy {
+    width: 100%;
+    padding: 58px 28px 420px;
+  }
+  .voting-hero-panel {
+    top: auto;
+    bottom: 22px;
+    right: 22px;
+    left: 22px;
+    width: auto;
+    min-height: 340px;
+    transform: none;
+    padding: 22px;
+  }
+  .voting-clock-icon { margin: 18px auto 12px; }
+  .featured-arrows { right: 28px; bottom: 380px; }
+}
+@media (max-width: 560px) {
+  .arena-hero { min-height: 900px; }
+  .featured-copy { padding: 46px 22px 430px; }
+  .featured-copy h1 { font-size: clamp(38px, 11vw, 54px); }
+  .voting-hero-panel {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    min-height: 350px;
+    padding: 18px;
+  }
+  .voting-timer { font-size: clamp(30px, 9vw, 40px); }
+  .featured-arrows { display: none; }
+}
