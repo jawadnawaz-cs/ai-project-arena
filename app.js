@@ -425,6 +425,9 @@ async function renderGroupCard(group) {
       '</div>' +
       '<div class="dash-message" role="status"></div>' +
       '</div>' +
+      (sub && sub.thumbnail_path
+        ? '<img class="project-thumbnail team-submission-thumbnail" src="' + escapeHtml(supabase.storage.from('project-thumbnails').getPublicUrl(sub.thumbnail_path).data.publicUrl) + '" alt="' + escapeHtml(sub.title) + ' thumbnail" loading="lazy">'
+        : '') +
       (sub
         ? '<div style="font-size:14px;margin-top:10px"><strong>' +
           escapeHtml(sub.title) +
