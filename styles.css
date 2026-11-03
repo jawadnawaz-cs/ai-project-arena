@@ -2489,3 +2489,30 @@ body.dark-mode {
 }
 
 
+
+
+/* Student-uploaded project thumbnails */
+.project-thumbnail {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg-subtle);
+  margin: 12px 0;
+}
+.team-submission-thumbnail {
+  max-width: 620px;
+}
+.submission-form input[type="file"] {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--ink-secondary);
+  font-size: 14px;
+}
